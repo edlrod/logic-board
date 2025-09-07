@@ -6,7 +6,7 @@ export default class Input {
 		y: 0,
 	};
 	public static keyDown: Record<string, boolean> = {};
-	private static keyEvents: Record<string, Function> = {};
+	private static keyEvents: Record<string, () => void> = {};
 	public static initialize() {
 		window.addEventListener("mousemove", (evtMouseMove: MouseEvent) => {
 			Input.mousePosition.x = evtMouseMove.pageX;
@@ -29,7 +29,7 @@ export default class Input {
 			mousePos.y < y + h
 		);
 	}
-	public static onKeyPressed(key: string, event: Function) {
+	public static onKeyPressed(key: string, event: () => void) {
 		Input.keyEvents[key] = event;
 	}
 }

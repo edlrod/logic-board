@@ -7,7 +7,8 @@ import type { ChipInput } from "./types";
 (window as any).$ = (selector: string) => document.querySelector(selector);
 declare var $: (selector: string) => HTMLElement | null;
 const canvas = $("canvas") as HTMLCanvasElement;
-const g: CanvasRenderingContext2D = canvas.getContext("2d")!;
+const g: CanvasRenderingContext2D | null = canvas.getContext("2d");
+
 let tool: string = "INTERACT";
 
 const MAIN_BOARD = new Board("");
@@ -47,13 +48,15 @@ window.addEventListener("load", () => {
 
 	// Setup Toolbar Buttons
 	const toolbarBtns = Array.from(
-		$("#toolbar")!.getElementsByClassName("tool-toggle"),
+		$("#toolbar")?.getElementsByClassName("tool-toggle") ?? [],
 	);
 	toolbarBtns.forEach((toolBtn) => {
 		if (toolBtn.getAttribute("toolName") === tool)
 			toolBtn.classList.add("selected");
 		toolBtn.addEventListener("click", () => {
-			toolbarBtns.forEach((btn) => btn.classList.remove("selected"));
+			toolbarBtns.forEach((btn) => {
+				btn.classList.remove("selected");
+			});
 			toolBtn.classList.add("selected");
 			tool = toolBtn.getAttribute("toolName")!;
 		});
@@ -62,7 +65,7 @@ window.addEventListener("load", () => {
 	Object.keys(Chip.Chips).forEach((chipType) => {
 		const properties = Chip.Chips[chipType];
 		const chipBtn = document.createElement("span");
-		$("#toolbar")!.insertBefore(chipBtn, $("#divider-2"));
+		$("#toolbar")?.insertBefore(chipBtn, $("#divider-2"));
 		chipBtns.push(chipBtn);
 		chipBtn.classList.add("toolbar-btn", "chip");
 		chipBtn.innerHTML = properties.icon
@@ -72,7 +75,9 @@ window.addEventListener("load", () => {
 		chipBtn.addEventListener("click", () => {
 			//if (clickEvt.target !== clickEvt.currentTarget) return;
 			const chipBtns = Array.from(document.getElementsByClassName("chip"));
-			chipBtns.forEach((btn) => btn.classList.remove("selected"));
+			chipBtns.forEach((btn) => {
+				btn.classList.remove("selected");
+			});
 			chipBtn.classList.add("selected");
 			selectedBuildChipType = chipType;
 
@@ -95,6 +100,7 @@ window.addEventListener("load", () => {
 	window.requestAnimationFrame(draw);
 });
 const draw = () => {
+	if (!g) return;
 	// Setup
 	const drawTask: {
 		sort: number;
@@ -392,7 +398,7 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
 		if (!selectedOutputChip) selectedOutputChip = highlightedOutlet as Chip;
 		else {
 			selectedOutputChip.setOutput(highlightedOutlet as ChipInput);
-			if (!Input.keyDown["Shift"]) selectedOutputChip = null;
+			if (!Input.keyDown.Shift) selectedOutputChip = null;
 		}
 		return;
 	}
@@ -439,7 +445,7 @@ canvas.addEventListener("mouseup", (evtMouseUp: MouseEvent) => {
 	}
 });
 canvas.addEventListener("wheel", (evtWheel: WheelEvent) => {
-	if (tool === "DESIGN" && !Input.keyDown["Shift"]) {
+	if (tool === "DESIGN" && !Input.keyDown.Shift) {
 		selectedInputNum += -Math.sign(evtWheel.deltaY);
 		const properties = Chip.Chips[selectedBuildChipType];
 		if (properties.minInputs !== null)
@@ -456,7 +462,7 @@ canvas.addEventListener("wheel", (evtWheel: WheelEvent) => {
 canvas.addEventListener("contextmenu", (evtContextMenu: MouseEvent) => {
 	evtContextMenu.preventDefault();
 });
-$("#exportBtn")!.addEventListener("click", () => {
+$("#exportBtn")?.addEventListener("click", () => {
 	const data: string = btoa(
 		JSON.stringify(currentBoard.chips.map((chip) => chip.serialize())),
 	);
@@ -466,7 +472,7 @@ $("#exportBtn")!.addEventListener("click", () => {
 		() => alert("An error occurred. Could not copy data."),
 	);
 });
-$("#importBtn")!.addEventListener("click", () => {
+$("#importBtn")?.addEventListener("click", () => {
 	try {
 		const result = JSON.parse(atob(prompt("Enter data: ") ?? ""));
 		const importedBoard = new Board("Imported Board");
@@ -497,12 +503,12 @@ $("#importBtn")!.addEventListener("click", () => {
 					)!;
 			}
 		}
-	} catch (e) {
+	} catch {
 		alert("An error occurred reading the data.");
 	}
 });
 if ($("#addBtn"))
-	$("#addBtn")!.addEventListener("click", () => {
+	$("#addBtn")?.addEventListener("click", () => {
 		let boardName = "";
 		do {
 			boardName = prompt("Enter board name: ") ?? "";
@@ -517,12 +523,12 @@ if ($("#addBtn"))
 		};
 
 		const toolbarBtns = Array.from(
-			$("#toolbar")!.getElementsByClassName("tool-toggle"),
+			$("#toolbar")?.getElementsByClassName("tool-toggle") ?? [],
 		);
 		const chipBtns = Array.from(document.getElementsByClassName("chip"));
 
 		const chipBtn = document.createElement("span");
-		$("#toolbar")!.insertBefore(chipBtn, $("#divider-2"));
+		$("#toolbar")?.insertBefore(chipBtn, $("#divider-2"));
 		chipBtn.classList.add("toolbar-btn", "chip");
 
 		const label = document.createElement("span");
@@ -536,7 +542,9 @@ if ($("#addBtn"))
 		chipBtn.append(label, edit);
 
 		chipBtn.addEventListener("click", () => {
-			chipBtns.forEach((btn) => btn.classList.remove("selected"));
+			chipBtns.forEach((btn) => {
+				btn.classList.remove("selected");
+			});
 			chipBtn.classList.add("selected");
 			selectedBuildChipType = newBoard.name ?? "";
 
@@ -555,7 +563,7 @@ if ($("#addBtn"))
 			});
 		});
 	});
-$("#backBtn")!.addEventListener("click", () => {
+$("#backBtn")?.addEventListener("click", () => {
 	currentBoard = MAIN_BOARD;
 	($("#backBtn") as HTMLSpanElement).style.display = "none";
 });
