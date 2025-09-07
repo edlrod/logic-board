@@ -1,8 +1,8 @@
 import Camera from "./Camera";
 import Chip from "./Chip";
-import type ChipInput from "./ChipInput";
 import Board from "./Board";
 import Input from "./Input";
+import type { ChipInput } from "./types";
 
 (window as any).$ = (selector: string) => document.querySelector(selector);
 declare var $: (selector: string) => HTMLElement | null;

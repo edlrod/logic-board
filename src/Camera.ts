@@ -1,4 +1,4 @@
-import type Vector2 from "./Vector2";
+import type { Vector2 } from "./types";
 
 export default class Camera {
   static position: Vector2 = {

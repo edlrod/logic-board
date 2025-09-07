@@ -1,7 +1,5 @@
 import Camera from "./Camera";
-import type ChipInfo from "./ChipInfo";
-import type ChipInput from "./ChipInput";
-import type Vector2 from "./Vector2";
+import type { ChipInfo, ChipInput, Vector2 } from "./types";
 
 export default class Chip {
   public static Chips: Record<string, ChipInfo> = {
