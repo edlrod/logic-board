@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logic Board</title>
+    <base href="." />
+    <script type="module" crossorigin src="./assets/index-Cp-4AZcd.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-B4PPI0sX.css">
+  </head>
+  <body>
+    <canvas></canvas>
+    <div id="toolbar">
+      <span class="toolbar-btn tool-toggle" toolName="INTERACT"
+        ><i class="fa-solid fa-xl fa-hand"></i
+      ></span>
+      <span class="toolbar-btn tool-toggle" toolName="DESIGN"
+        ><i class="fa-solid fa-xl fa-paintbrush"></i
+      ></span>
+      <span class="toolbar-btn tool-toggle" toolName="WIRE"
+        ><i class="fa-solid fa-xl fa-wrench"></i
+      ></span>
+      <span class="toolbar-divider" id="divider-1"></span>
+      <!--<span class="toolbar-btn" id="addBtn">+</span>-->
+      <span class="toolbar-divider" id="divider-2"></span>
+      <span class="toolbar-btn" id="exportBtn">Export</span>
+      <span class="toolbar-btn" id="importBtn">Import</span>
+      <span
+        class="toolbar-btn"
+        id="infoBtn"
+        onclick="$('#popup').classList.remove('hidden')"
+        ><i class="fa-solid fa-xl fa-info-circle"></i
+      ></span>
+      <span class="toolbar-btn" id="backBtn" style="display: none">Back</span>
+    </div>
+    <div id="popup" class="hidden">
+      Logic Board v2.0<br />
+      <br />
+      <b>Interact (<i class="fa-solid fa-hand"></i>):</b> Move the camera,
+      interact with switches, move chips<br />
+      <b>Design (<i class="fa-solid fa-paintbrush"></i>):</b> Place, delete and
+      rotate (R) chips<br />
+      <b>Wire (<i class="fa-solid fa-wrench"></i>):</b> Connect wires between
+      the inputs and outputs of chips<br />
+      <br />
+      Originally created by
+      <a href="/" target="_blank"
+        >Ed</a
+      >
+      for the AP Computer Science Principles Performance Task in 2021.<br /><br />
+      <button onclick="$('#popup').classList.add('hidden')">Close</button>
+    </div>
+    <script
+      src="https://kit.fontawesome.com/6b9987c0fa.js"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
