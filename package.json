@@ -5,15 +5,21 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "tsc && vite build",
-		"deploy": "npx gh-pages -d dist",
-		"preview": "vite preview",
-		"check": "npx @biomejs/biome check --write"
+		"build": "tsc -b && vite build",
+		"lint": "biome check . --write",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"react": "^19.2.5",
+		"react-dom": "^19.2.5"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.3",
-		"gh-pages": "^6.3.0",
-		"typescript": "~5.8.3",
-		"vite": "^7.1.2"
+		"@types/node": "^24.12.2",
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^6.0.1",
+		"typescript": "~6.0.2",
+		"vite": "^8.0.10"
 	}
 }
