@@ -6,10 +6,11 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
-		"check": "biome check .",
-		"format": "biome format --write .",
 		"lint": "biome check --write .",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"prepare": "husky",
+		"predeploy": "bun run build",
+		"deploy": "gh-pages -d dist"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.4.1",
@@ -29,10 +30,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.3",
+		"@commitlint/cli": "^20.5.2",
+		"@commitlint/config-conventional": "^20.5.0",
 		"@types/node": "^24.12.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.1",
+		"gh-pages": "^6.3.0",
+		"husky": "^9.1.7",
 		"typescript": "~6.0.2",
 		"vite": "^8.0.10"
 	}
