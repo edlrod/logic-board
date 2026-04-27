@@ -112,7 +112,7 @@ const decodeNodeData = ({
 	boardInputPortIds,
 	boardOutputPortIds,
 }: {
-	kind: NodeKind;
+	kind: string;
 	data: number | undefined;
 	boardInputPortIds: PortId[];
 	boardOutputPortIds: PortId[];
@@ -141,6 +141,12 @@ const decodeNodeData = ({
 		case "xor":
 			return { kind: "xor" };
 	}
+
+	if (kind.startsWith("module:")) {
+		return { kind: "module", boardId: kind.slice("module:".length) };
+	}
+
+	return { kind: "buffer" };
 };
 
 const encodePortRef = ({

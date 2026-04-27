@@ -5,8 +5,8 @@ import {
 	type BoardPort,
 	buildPortLookup,
 	type Node,
+	type NodeDefinitionRegistry,
 	type NodeKind,
-	nodeDefinitions,
 	type PortId,
 } from "../domain";
 import {
@@ -81,6 +81,8 @@ interface BoardViewportProps {
 	): void;
 	onBoardCommand(command: BoardCommand): void;
 	tool: Tool;
+	nodeDefinitions: NodeDefinitionRegistry;
+	resolveBoard(boardId: string): Board | null;
 	buildRequest: {
 		id: number;
 		nodeKind: NodeKind;
@@ -96,6 +98,8 @@ export const BoardViewport = ({
 	onExternalInputsChange,
 	onBoardCommand,
 	tool,
+	nodeDefinitions,
+	resolveBoard,
 	buildRequest,
 }: BoardViewportProps) => {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -112,8 +116,12 @@ export const BoardViewport = ({
 	const toolRef = useRef(tool);
 
 	const simulationResult = useMemo(
-		() => evaluateBoard(board, externalInputs),
-		[board, externalInputs],
+		() =>
+			evaluateBoard(board, externalInputs, {
+				definitions: nodeDefinitions,
+				resolveBoard,
+			}),
+		[board, externalInputs, nodeDefinitions, resolveBoard],
 	);
 	const simulationResultRef = useRef(simulationResult);
 
@@ -613,9 +621,7 @@ export const BoardViewport = ({
 
 			Object.values(currentBoard.inputPorts).forEach((port) => {
 				const position = getBoardPortPosition(currentBoard, port);
-				const isHovered =
-					selectedSourcePortIdRef.current !== null &&
-					hoveredPortIdRef.current === port.id;
+				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
 				context.fillStyle = isHovered
 					? "#f4d35e"
@@ -924,7 +930,7 @@ export const BoardViewport = ({
 				window.cancelAnimationFrame(frameRef.current);
 			}
 		};
-	}, [onBoardCommand, onExternalInputsChange]);
+	}, [nodeDefinitions, onBoardCommand, onExternalInputsChange]);
 
 	return (
 		<div className="relative h-screen w-screen">

@@ -1,4 +1,4 @@
-import { type NodeKind, nodeDefinitions } from "../domain";
+import type { BoardId, NodeDefinitionRegistry, NodeKind } from "../domain";
 import type { Tool } from "../editor/types";
 
 const TOOL_SEQUENCE: Tool[] = ["TEST", "DESIGN"];
@@ -22,26 +22,42 @@ const getButtonClassName = (selected = false, extra = "") =>
 		.join(" ");
 
 interface ToolbarProps {
+	isRootBoard: boolean;
+	activeBoardId: BoardId;
+	boardName: string;
+	boardOptions: { id: BoardId; name: string }[];
+	nodeDefinitions: NodeDefinitionRegistry;
 	tool: Tool;
 	showHelp: boolean;
 	nodeKinds: NodeKind[];
 	onToolChange(tool: Tool): void;
+	onActiveBoardChange(boardId: BoardId): void;
+	onNewBoard(): void;
 	onNodeKindSelect(nodeKind: NodeKind): void;
 	onAddBoardInput(): void;
 	onAddBoardOutput(): void;
+	onRenameBoard(): void;
 	onExport(): void;
 	onImport(): void;
 	onHelpToggle(): void;
 }
 
 export const Toolbar = ({
+	isRootBoard,
+	activeBoardId,
+	boardName,
+	boardOptions,
+	nodeDefinitions,
 	tool,
 	showHelp,
 	nodeKinds,
 	onToolChange,
+	onActiveBoardChange,
+	onNewBoard,
 	onNodeKindSelect,
 	onAddBoardInput,
 	onAddBoardOutput,
+	onRenameBoard,
 	onExport,
 	onImport,
 	onHelpToggle,
@@ -49,6 +65,37 @@ export const Toolbar = ({
 	return (
 		<>
 			<header className="fixed top-4 right-4 left-4 z-10 flex gap-3 items-center overflow-x-auto rounded-[20px] border border-[rgba(16,42,67,0.12)] bg-[rgba(255,255,255,0.84)] p-3 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-lg">
+				<div className="flex items-center gap-2 rounded-full bg-[rgba(16,42,67,0.06)] px-3 py-1">
+					<span className="text-[0.72rem] font-bold tracking-[0.08em] text-[#5b6573] uppercase">
+						Board
+					</span>
+					<select
+						className="rounded-full border border-[rgba(16,42,67,0.12)] bg-white px-3 py-2 text-sm font-semibold text-[#102a43]"
+						value={activeBoardId}
+						onChange={(event) => onActiveBoardChange(event.target.value)}
+					>
+						{boardOptions.map((board) => (
+							<option key={board.id} value={board.id}>
+								{board.name}
+							</option>
+						))}
+					</select>
+					<button
+						type="button"
+						className={getButtonClassName()}
+						onClick={onNewBoard}
+					>
+						New Board
+					</button>
+					<button
+						type="button"
+						className={getButtonClassName()}
+						onClick={onRenameBoard}
+					>
+						Rename
+					</button>
+				</div>
+				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] lg:h-auto lg:w-px lg:self-stretch" />
 				<div className="flex flex-wrap gap-2 rounded-full bg-[rgba(16,42,67,0.06)] p-1">
 					{TOOL_SEQUENCE.map((toolName) => (
 						<button
@@ -70,26 +117,29 @@ export const Toolbar = ({
 							className={getButtonClassName(false, "min-w-20")}
 							onClick={() => onNodeKindSelect(nodeKind)}
 						>
-							{nodeDefinitions[nodeKind].displayName}
+							{nodeDefinitions[nodeKind]?.displayName ?? nodeKind}
 						</button>
 					))}
 				</div>
-				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] lg:h-auto lg:w-px lg:self-stretch" />
 				<div className="flex flex-wrap gap-2 lg:ml-auto">
-					<button
-						type="button"
-						className={getButtonClassName()}
-						onClick={onAddBoardInput}
-					>
-						Add Input
-					</button>
-					<button
-						type="button"
-						className={getButtonClassName()}
-						onClick={onAddBoardOutput}
-					>
-						Add Output
-					</button>
+					{isRootBoard ? null : (
+						<>
+							<button
+								type="button"
+								className={getButtonClassName()}
+								onClick={onAddBoardInput}
+							>
+								Add Input
+							</button>
+							<button
+								type="button"
+								className={getButtonClassName()}
+								onClick={onAddBoardOutput}
+							>
+								Add Output
+							</button>
+						</>
+					)}
 					<button
 						type="button"
 						className={getButtonClassName()}
@@ -120,6 +170,9 @@ export const Toolbar = ({
 						Logic Board
 					</h1>
 					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+						Current board: {boardName}
+					</p>
+					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
 						Test: toggle switches and board inputs.
 					</p>
 					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
@@ -127,8 +180,14 @@ export const Toolbar = ({
 						port and then an input port when your hand is empty.
 					</p>
 					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
-						Right-drag pans the camera. Scroll zooms.
+						Every board is automatically available as a reusable module node in
+						other boards.
 					</p>
+					{isRootBoard ? (
+						<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+							The main board cannot add board-level inputs or outputs.
+						</p>
+					) : null}
 				</aside>
 			) : null}
 		</>

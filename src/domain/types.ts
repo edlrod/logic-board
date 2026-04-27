@@ -7,7 +7,7 @@ export type PortDirection = "input" | "output";
 export type PortOwnerKind = "board" | "node";
 export type BoardPortRole = "boardInput" | "boardOutput";
 
-export type NodeKind =
+export type BuiltinNodeKind =
 	| "switch"
 	| "buffer"
 	| "not"
@@ -16,6 +16,9 @@ export type NodeKind =
 	| "xor"
 	| "boardInput"
 	| "boardOutput";
+
+export type ModuleNodeKind = `module:${string}`;
+export type NodeKind = BuiltinNodeKind | ModuleNodeKind;
 
 export interface Point {
 	x: number;
@@ -50,7 +53,8 @@ export type NodeData =
 	| { kind: "or" }
 	| { kind: "xor" }
 	| { kind: "boardInput"; boardPortId: PortId }
-	| { kind: "boardOutput"; boardPortId: PortId };
+	| { kind: "boardOutput"; boardPortId: PortId }
+	| { kind: "module"; boardId: BoardId };
 
 export interface Node {
 	id: NodeId;
@@ -88,7 +92,7 @@ export interface NodeDefinition {
 	evaluate(inputs: boolean[], data: NodeData): boolean[];
 }
 
-export type NodeDefinitionRegistry = Record<NodeKind, NodeDefinition>;
+export type NodeDefinitionRegistry = Record<string, NodeDefinition>;
 
 export interface BoardValidationIssue {
 	code: string;

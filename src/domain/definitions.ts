@@ -1,4 +1,14 @@
-import type { NodeDefinitionRegistry } from "./types";
+import type {
+	BuiltinNodeKind,
+	NodeDefinitionRegistry,
+	NodeKind,
+} from "./types";
+
+export const getModuleNodeKind = (boardId: string): `module:${string}` =>
+	`module:${boardId}`;
+
+export const isBuiltinNodeKind = (kind: NodeKind): kind is BuiltinNodeKind =>
+	!kind.startsWith("module:");
 
 export const nodeDefinitions: NodeDefinitionRegistry = {
 	switch: {

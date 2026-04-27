@@ -1,5 +1,9 @@
 export { applyBoardCommand } from "./commands";
-export { nodeDefinitions } from "./definitions";
+export {
+	getModuleNodeKind,
+	isBuiltinNodeKind,
+	nodeDefinitions,
+} from "./definitions";
 export {
 	createBoard,
 	createBoardPort,

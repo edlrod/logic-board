@@ -14,6 +14,7 @@ import type {
 	BoardCommandResult,
 	BoardValidationIssue,
 	Node,
+	NodeDefinitionRegistry,
 	NodePort,
 	PortId,
 	Wire,
@@ -85,6 +86,7 @@ const resizeNodeInputPorts = (
 	board: Board,
 	nodeId: string,
 	inputCount: number,
+	definitions: NodeDefinitionRegistry,
 ) => {
 	const node = board.nodes[nodeId];
 	if (!node) {
@@ -94,7 +96,7 @@ const resizeNodeInputPorts = (
 		);
 	}
 
-	const definition = nodeDefinitions[node.kind];
+	const definition = definitions[node.kind];
 	let normalizedInputCount = Math.max(definition.minInputs, inputCount);
 	if (definition.maxInputs !== null) {
 		normalizedInputCount = Math.min(definition.maxInputs, normalizedInputCount);
@@ -110,6 +112,7 @@ const resizeNodeInputPorts = (
 			position: node.position,
 			rotation: node.rotation,
 			inputCount: nextPorts.length + 1,
+			definitions,
 		}).inputPorts;
 		const newestPort = Object.values(port).sort(
 			(left, right) => left.index - right.index,
@@ -194,6 +197,7 @@ const connectPortsInternal = (
 export const applyBoardCommand = (
 	board: Board,
 	command: BoardCommand,
+	definitions: NodeDefinitionRegistry = nodeDefinitions,
 ): BoardCommandResult => {
 	switch (command.type) {
 		case "addNode":
@@ -205,6 +209,7 @@ export const applyBoardCommand = (
 						position: command.position,
 						rotation: command.rotation,
 						inputCount: command.inputCount,
+						definitions,
 					}),
 				),
 			);
@@ -306,7 +311,12 @@ export const applyBoardCommand = (
 		}
 
 		case "setNodeInputCount":
-			return resizeNodeInputPorts(board, command.nodeId, command.inputCount);
+			return resizeNodeInputPorts(
+				board,
+				command.nodeId,
+				command.inputCount,
+				definitions,
+			);
 
 		case "addBoardInput": {
 			const port = createBoardPort({

@@ -9,3 +9,10 @@ export {
 	materializeBoardDocument,
 } from "./boardDocument";
 export { migrateBoardDocument } from "./migrateBoardDocument";
+export {
+	createWorkspaceDocument,
+	decodeUnknownWorkspaceDocument,
+	encodeWorkspaceDocument,
+	materializeWorkspaceDocument,
+	migrateWorkspaceDocument,
+} from "./workspaceDocument";

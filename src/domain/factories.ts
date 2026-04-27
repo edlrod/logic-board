@@ -6,6 +6,7 @@ import type {
 	BoardPort,
 	BoardPortRole,
 	Node,
+	NodeDefinitionRegistry,
 	NodeId,
 	NodeKind,
 	NodePort,
@@ -34,8 +35,8 @@ const createNodePort = ({
 	label,
 });
 
-export const createBoard = (name: string): Board => ({
-	id: createId("board"),
+export const createBoard = (name: string, id = createId("board")): Board => ({
+	id,
 	name,
 	nodes: {},
 	wires: {},
@@ -68,13 +69,18 @@ export const createNode = ({
 	position,
 	rotation = 0,
 	inputCount,
+	definitions = nodeDefinitions,
 }: {
 	kind: NodeKind;
 	position: Point;
 	rotation?: number;
 	inputCount?: number;
+	definitions?: NodeDefinitionRegistry;
 }): Node => {
-	const definition = nodeDefinitions[kind];
+	const definition = definitions[kind];
+	if (!definition) {
+		throw new Error(`Node definition for ${kind} was not found.`);
+	}
 	const nodeId = createId("node");
 
 	let normalizedInputCount = inputCount ?? definition.minInputs;
