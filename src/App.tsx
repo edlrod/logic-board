@@ -1,5 +1,5 @@
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BoardViewport } from "./components/BoardViewport";
 import { Toolbar } from "./components/Toolbar";
@@ -166,6 +166,7 @@ const App = () => {
 	const [dialogValue, setDialogValue] = useState("");
 	const { resolvedTheme, setTheme } = useTheme();
 	const isDarkMode = resolvedTheme === "dark";
+	const didLoadQueryImportRef = useRef(false);
 
 	const activeBoard = workspace.boards[workspace.activeBoardId];
 	const activeExternalInputs =
@@ -274,7 +275,7 @@ const App = () => {
 		}
 	};
 
-	const handleImportValue = (rawData: string) => {
+	const handleImportValue = useCallback((rawData: string) => {
 		const importedDocument = migrateWorkspaceDocument(
 			decodeUnknownWorkspaceDocument(rawData),
 		);
@@ -288,7 +289,28 @@ const App = () => {
 			),
 		);
 		setShowInfo(false);
-	};
+	}, []);
+
+	useEffect(() => {
+		if (didLoadQueryImportRef.current) {
+			return;
+		}
+
+		didLoadQueryImportRef.current = true;
+		const encodedImport = new URLSearchParams(window.location.search).get(
+			"import",
+		);
+		if (!encodedImport) {
+			return;
+		}
+
+		try {
+			handleImportValue(encodedImport);
+			toast.success("Workspace imported from URL.");
+		} catch {
+			toast.error("Failed to import workspace from URL.");
+		}
+	}, [handleImportValue]);
 
 	const handleDialogSubmit = () => {
 		const normalizedValue = dialogValue.trim();
@@ -498,7 +520,7 @@ const App = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			<div className="fixed right-4 bottom-4 z-20 rounded-full border border-[rgba(16,42,67,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-[0.72rem] font-medium tracking-[0.08em] text-[#486581] uppercase shadow-[0_14px_36px_rgba(15,23,42,0.12)] backdrop-blur-md dark:border-white/10 dark:bg-[rgba(15,23,42,0.74)] dark:text-slate-400 dark:shadow-[0_14px_36px_rgba(2,6,23,0.36)]">
+			<div className="fixed right-4 bottom-4 flex gap-2">
 				<a href="https://edlrod.com" target="_blank" rel="noreferrer">
 					edlrod
 				</a>
