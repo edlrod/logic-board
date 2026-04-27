@@ -15,6 +15,7 @@ import {
 	createBoardDocument,
 	decodeUnknownBoardDocument,
 	encodeBoardDocument,
+	materializeBoardDocument,
 	migrateBoardDocument,
 } from "./serialization";
 
@@ -103,7 +104,7 @@ const App = () => {
 			const importedDocument = migrateBoardDocument(
 				decodeUnknownBoardDocument(rawData),
 			);
-			updateBoard(importedDocument.board);
+			updateBoard(materializeBoardDocument(importedDocument));
 			setShowInfo(false);
 		} catch {
 			window.alert("An error occurred reading the data.");

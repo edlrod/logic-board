@@ -6,5 +6,6 @@ export {
 	createBoardDocument,
 	decodeUnknownBoardDocument,
 	encodeBoardDocument,
+	materializeBoardDocument,
 } from "./boardDocument";
 export { migrateBoardDocument } from "./migrateBoardDocument";
