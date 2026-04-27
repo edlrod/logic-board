@@ -1,25 +1,15 @@
 import type { BoardId, NodeDefinitionRegistry, NodeKind } from "../domain";
 import type { Tool } from "../editor/types";
+import { Button } from "./ui/button";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "./ui/select";
 
 const TOOL_SEQUENCE: Tool[] = ["TEST", "DESIGN"];
-const buttonBaseClass = [
-	"cursor-pointer rounded-full border px-4 py-[0.7rem]",
-	"text-[0.75rem] leading-none font-bold tracking-[0.08em] uppercase",
-	"transition-[transform,background-color,border-color] duration-120",
-].join(" ");
-const buttonIdleClass = [
-	"border-[rgba(16,42,67,0.16)] bg-[rgba(255,255,255,0.94)]",
-	"text-[#102a43] hover:-translate-y-px hover:border-[rgba(16,42,67,0.28)]",
-].join(" ");
-const buttonSelectedClass = [
-	"border-[#d9b54c] bg-[#f4d35e] text-[#102a43]",
-	"shadow-[0_10px_24px_rgba(244,211,94,0.28)]",
-].join(" ");
-
-const getButtonClassName = (selected = false, extra = "") =>
-	[buttonBaseClass, selected ? buttonSelectedClass : buttonIdleClass, extra]
-		.filter(Boolean)
-		.join(" ");
 
 interface ToolbarProps {
 	isRootBoard: boolean;
@@ -41,6 +31,17 @@ interface ToolbarProps {
 	onImport(): void;
 	onHelpToggle(): void;
 }
+
+const getToolbarButtonClassName = (selected = false, extra = "") =>
+	[
+		"rounded-full border uppercase tracking-[0.08em]",
+		selected
+			? "border-[#d9b54c] bg-[#f4d35e] text-[#102a43] shadow-[0_10px_24px_rgba(244,211,94,0.28)] hover:bg-[#f4d35e]"
+			: "border-[rgba(16,42,67,0.16)] bg-[rgba(255,255,255,0.94)] text-[#102a43] hover:border-[rgba(16,42,67,0.28)] hover:bg-[rgba(255,255,255,0.94)]",
+		extra,
+	]
+		.filter(Boolean)
+		.join(" ");
 
 export const Toolbar = ({
 	isRootBoard,
@@ -69,98 +70,114 @@ export const Toolbar = ({
 					<span className="text-[0.72rem] font-bold tracking-[0.08em] text-[#5b6573] uppercase">
 						Board
 					</span>
-					<select
-						className="rounded-full border border-[rgba(16,42,67,0.12)] bg-white px-3 py-2 text-sm font-semibold text-[#102a43]"
+					<Select
 						value={activeBoardId}
-						onChange={(event) => onActiveBoardChange(event.target.value)}
+						onValueChange={(value) => {
+							if (value) {
+								onActiveBoardChange(value);
+							}
+						}}
 					>
-						{boardOptions.map((board) => (
-							<option key={board.id} value={board.id}>
-								{board.name}
-							</option>
-						))}
-					</select>
-					<button
+						<SelectTrigger className="min-w-36 rounded-full bg-white font-semibold text-[#102a43]">
+							<SelectValue>{boardName}</SelectValue>
+						</SelectTrigger>
+						<SelectContent>
+							{boardOptions.map((board) => (
+								<SelectItem key={board.id} value={board.id}>
+									{board.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<Button
 						type="button"
-						className={getButtonClassName()}
+						variant="outline"
+						className={getToolbarButtonClassName(false)}
 						onClick={onNewBoard}
 					>
 						New Board
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
-						className={getButtonClassName()}
+						variant="outline"
+						className={getToolbarButtonClassName(false)}
 						onClick={onRenameBoard}
 					>
 						Rename
-					</button>
+					</Button>
 				</div>
-				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] lg:h-auto lg:w-px lg:self-stretch" />
 				<div className="flex flex-wrap gap-2 rounded-full bg-[rgba(16,42,67,0.06)] p-1">
 					{TOOL_SEQUENCE.map((toolName) => (
-						<button
+						<Button
 							key={toolName}
 							type="button"
-							className={getButtonClassName(tool === toolName)}
+							variant={tool === toolName ? "secondary" : "outline"}
+							className={getToolbarButtonClassName(tool === toolName)}
 							onClick={() => onToolChange(toolName)}
 						>
 							{toolName}
-						</button>
+						</Button>
 					))}
 				</div>
 				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] lg:h-auto lg:w-px lg:self-stretch" />
 				<div className="flex max-w-full flex-wrap gap-2 lg:max-w-[50vw]">
 					{nodeKinds.map((nodeKind) => (
-						<button
+						<Button
 							key={nodeKind}
 							type="button"
-							className={getButtonClassName(false, "min-w-20")}
+							variant="outline"
+							className={getToolbarButtonClassName(false, "min-w-20")}
 							onClick={() => onNodeKindSelect(nodeKind)}
 						>
 							{nodeDefinitions[nodeKind]?.displayName ?? nodeKind}
-						</button>
+						</Button>
 					))}
 				</div>
 				<div className="flex flex-wrap gap-2 lg:ml-auto">
 					{isRootBoard ? null : (
 						<>
-							<button
+							<Button
 								type="button"
-								className={getButtonClassName()}
+								variant="outline"
+								className={getToolbarButtonClassName(false)}
 								onClick={onAddBoardInput}
 							>
 								Add Input
-							</button>
-							<button
+							</Button>
+							<Button
 								type="button"
-								className={getButtonClassName()}
+								variant="outline"
+								className={getToolbarButtonClassName(false)}
 								onClick={onAddBoardOutput}
 							>
 								Add Output
-							</button>
+							</Button>
 						</>
 					)}
-					<button
+					<Button
 						type="button"
-						className={getButtonClassName()}
+						variant="outline"
+						className={getToolbarButtonClassName(false)}
 						onClick={onExport}
 					>
 						Export
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
-						className={getButtonClassName()}
+						variant="outline"
+						className={getToolbarButtonClassName(false)}
 						onClick={onImport}
 					>
 						Import
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
-						className={getButtonClassName()}
+						variant="outline"
+						className={getToolbarButtonClassName(false)}
 						onClick={onHelpToggle}
 					>
 						Help
-					</button>
+					</Button>
 				</div>
 			</header>
 

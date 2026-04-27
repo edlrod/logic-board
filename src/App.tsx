@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { BoardViewport } from "./components/BoardViewport";
 import { Toolbar } from "./components/Toolbar";
+import { Button } from "./components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "./components/ui/dialog";
+import { Input } from "./components/ui/input";
+import { Toaster } from "./components/ui/sonner";
 import {
 	applyBoardCommand,
 	type Board,
@@ -32,6 +44,8 @@ const PALETTE_NODE_KINDS: NodeKind[] = [
 	"or",
 	"xor",
 ];
+
+type DialogMode = "new-board" | "rename-board" | "import" | "export" | null;
 
 const syncExternalInputs = (
 	board: Board,
@@ -97,6 +111,45 @@ const createInitialWorkspace = (): Workspace => {
 	};
 };
 
+const getDialogMeta = (mode: DialogMode, boardName: string) => {
+	switch (mode) {
+		case "new-board":
+			return {
+				title: "New Board",
+				description: "Create a new reusable board.",
+				placeholder: "UNTITLED",
+				confirmLabel: "Create",
+			};
+		case "rename-board":
+			return {
+				title: "Rename Board",
+				description: `Rename ${boardName}.`,
+				placeholder: boardName,
+				confirmLabel: "Save",
+			};
+		case "import":
+			return {
+				title: "Import Workspace",
+				description: "Paste exported workspace data.",
+				placeholder: "PASTE WORKSPACE DATA",
+				confirmLabel: "Import",
+				multiline: true,
+				readOnly: false,
+			};
+		case "export":
+			return {
+				title: "Export Workspace",
+				description: "Clipboard export is unavailable. Copy the data below.",
+				placeholder: "",
+				confirmLabel: "Close",
+				multiline: true,
+				readOnly: true,
+			};
+		case null:
+			return null;
+	}
+};
+
 const App = () => {
 	const [workspace, setWorkspace] = useState<Workspace>(() =>
 		createInitialWorkspace(),
@@ -108,6 +161,8 @@ const App = () => {
 		nodeKind: NodeKind;
 		inputCount: number;
 	} | null>(null);
+	const [dialogMode, setDialogMode] = useState<DialogMode>(null);
+	const [dialogValue, setDialogValue] = useState("");
 
 	const activeBoard = workspace.boards[workspace.activeBoardId];
 	const activeExternalInputs =
@@ -123,6 +178,13 @@ const App = () => {
 		}),
 		[workspace.activeBoardId, workspace.boards, workspace.rootBoardId],
 	);
+
+	const dialogMeta = getDialogMeta(dialogMode, activeBoard.name);
+
+	const closeDialog = () => {
+		setDialogMode(null);
+		setDialogValue("");
+	};
 
 	const handleBoardCommand = useCallback((command: BoardCommand) => {
 		setWorkspace((currentWorkspace) => {
@@ -193,40 +255,86 @@ const App = () => {
 			createWorkspaceDocument(workspace),
 		);
 		if (!navigator.clipboard) {
-			window.alert(serialized);
+			setDialogMode("export");
+			setDialogValue(serialized);
+			toast.info("Clipboard unavailable. Export data is shown in a dialog.");
 			return;
 		}
 
 		try {
 			await navigator.clipboard.writeText(serialized);
-			window.alert("Copied data.");
+			toast.success("Workspace data copied.");
 		} catch {
-			window.alert("Clipboard write failed.");
+			setDialogMode("export");
+			setDialogValue(serialized);
+			toast.error("Clipboard write failed. Export data is shown in a dialog.");
 		}
 	};
 
-	const handleImport = () => {
-		try {
-			const rawData = window.prompt("Enter workspace data:");
-			if (!rawData) {
-				return;
-			}
+	const handleImportValue = (rawData: string) => {
+		const importedDocument = migrateWorkspaceDocument(
+			decodeUnknownWorkspaceDocument(rawData),
+		);
+		const nextWorkspace = materializeWorkspaceDocument(importedDocument);
+		setWorkspace(
+			reconcileWorkspaceBoards(
+				nextWorkspace,
+				buildModuleDefinitions(nextWorkspace.boards, [
+					nextWorkspace.rootBoardId,
+				]),
+			),
+		);
+		setShowInfo(false);
+	};
 
-			const importedDocument = migrateWorkspaceDocument(
-				decodeUnknownWorkspaceDocument(rawData),
-			);
-			const nextWorkspace = materializeWorkspaceDocument(importedDocument);
-			setWorkspace(
-				reconcileWorkspaceBoards(
-					nextWorkspace,
-					buildModuleDefinitions(nextWorkspace.boards, [
-						nextWorkspace.rootBoardId,
-					]),
-				),
-			);
-			setShowInfo(false);
+	const handleDialogSubmit = () => {
+		const normalizedValue = dialogValue.trim();
+		if (!dialogMode) {
+			return;
+		}
+
+		if (dialogMode === "export") {
+			closeDialog();
+			return;
+		}
+
+		if (!normalizedValue) {
+			return;
+		}
+
+		try {
+			if (dialogMode === "new-board") {
+				const nextBoard = createBoard(normalizedValue.toUpperCase());
+				setWorkspace((currentWorkspace) => ({
+					...currentWorkspace,
+					activeBoardId: nextBoard.id,
+					boards: {
+						...currentWorkspace.boards,
+						[nextBoard.id]: nextBoard,
+					},
+					externalInputsByBoardId: {
+						...currentWorkspace.externalInputsByBoardId,
+						[nextBoard.id]: {},
+					},
+				}));
+			} else if (dialogMode === "rename-board") {
+				setWorkspace((currentWorkspace) => ({
+					...currentWorkspace,
+					boards: {
+						...currentWorkspace.boards,
+						[currentWorkspace.activeBoardId]: {
+							...currentWorkspace.boards[currentWorkspace.activeBoardId],
+							name: normalizedValue.toUpperCase(),
+						},
+					},
+				}));
+			} else if (dialogMode === "import") {
+				handleImportValue(normalizedValue);
+				toast.success("Workspace imported.");
+			}
+			closeDialog();
 		} catch {
-			window.alert("An error occurred reading the data.");
+			toast.error("An error occurred reading the data.");
 		}
 	};
 
@@ -276,48 +384,6 @@ const App = () => {
 		},
 		[],
 	);
-
-	const handleNewBoard = () => {
-		const name = window.prompt("Board name?", "UNTITLED")?.toUpperCase().trim();
-		if (!name) {
-			return;
-		}
-
-		const nextBoard = createBoard(name);
-		setWorkspace((currentWorkspace) => ({
-			...currentWorkspace,
-			activeBoardId: nextBoard.id,
-			boards: {
-				...currentWorkspace.boards,
-				[nextBoard.id]: nextBoard,
-			},
-			externalInputsByBoardId: {
-				...currentWorkspace.externalInputsByBoardId,
-				[nextBoard.id]: {},
-			},
-		}));
-	};
-
-	const handleRenameBoard = () => {
-		const nextName = window
-			.prompt("Board name?", activeBoard.name)
-			?.toUpperCase()
-			.trim();
-		if (!nextName) {
-			return;
-		}
-
-		setWorkspace((currentWorkspace) => ({
-			...currentWorkspace,
-			boards: {
-				...currentWorkspace.boards,
-				[currentWorkspace.activeBoardId]: {
-					...currentWorkspace.boards[currentWorkspace.activeBoardId],
-					name: nextName,
-				},
-			},
-		}));
-	};
 
 	const resolveBoard = useCallback(
 		(boardId: BoardId) => workspace.boards[boardId] ?? null,
@@ -369,15 +435,75 @@ const App = () => {
 						activeBoardId: boardId,
 					}))
 				}
-				onNewBoard={handleNewBoard}
+				onNewBoard={() => {
+					setDialogMode("new-board");
+					setDialogValue("UNTITLED");
+				}}
 				onNodeKindSelect={handleSpawnNode}
 				onAddBoardInput={() => handleBoardCommand({ type: "addBoardInput" })}
 				onAddBoardOutput={() => handleBoardCommand({ type: "addBoardOutput" })}
-				onRenameBoard={handleRenameBoard}
+				onRenameBoard={() => {
+					setDialogMode("rename-board");
+					setDialogValue(activeBoard.name);
+				}}
 				onExport={handleExport}
-				onImport={handleImport}
+				onImport={() => {
+					setDialogMode("import");
+					setDialogValue("");
+				}}
 				onHelpToggle={() => setShowInfo((visible) => !visible)}
 			/>
+
+			<Dialog
+				open={dialogMode !== null}
+				onOpenChange={(open) => !open && closeDialog()}
+			>
+				<DialogContent className="max-w-lg">
+					<DialogHeader>
+						<DialogTitle>{dialogMeta?.title}</DialogTitle>
+						<DialogDescription>{dialogMeta?.description}</DialogDescription>
+					</DialogHeader>
+					{dialogMeta?.multiline ? (
+						<textarea
+							value={dialogValue}
+							onChange={(event) => setDialogValue(event.target.value)}
+							placeholder={dialogMeta.placeholder}
+							readOnly={dialogMeta.readOnly}
+							autoFocus
+							className="border-input focus-visible:border-ring focus-visible:ring-ring/50 min-h-40 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
+						/>
+					) : (
+						<Input
+							value={dialogValue}
+							onChange={(event) => setDialogValue(event.target.value)}
+							placeholder={dialogMeta?.placeholder}
+							autoFocus
+						/>
+					)}
+					<DialogFooter>
+						<Button variant="outline" onClick={closeDialog}>
+							{dialogMode === "export" ? "Close" : "Cancel"}
+						</Button>
+						{dialogMode === "export" ? null : (
+							<Button onClick={handleDialogSubmit}>
+								{dialogMeta?.confirmLabel ?? "Save"}
+							</Button>
+						)}
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+			<div className="fixed bottom-4 right-4 flex gap-2">
+				<a href="https://edlrod.com" target="_blank" rel="noreferrer">edlrod</a>
+				&bull;
+				<a
+					href="https://github.com/edlrod/logic-board"
+					target="_blank"
+					rel="noreferrer"
+				>
+					GitHub
+				</a>
+			</div>
+			<Toaster richColors position="bottom-right" />
 		</div>
 	);
 };
