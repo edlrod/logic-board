@@ -66,6 +66,11 @@ const drawRotationIndicator = (
 	context.restore();
 };
 
+const rotateVector = (x: number, y: number, rotation: number) => ({
+	x: x * Math.cos(rotation) - y * Math.sin(rotation),
+	y: x * Math.sin(rotation) + y * Math.cos(rotation),
+});
+
 interface BoardViewportProps {
 	board: Board;
 	externalInputs: Record<PortId, boolean>;
@@ -231,6 +236,108 @@ export const BoardViewport = ({
 			});
 		};
 
+		const getPortTangent = ({
+			portId,
+			boardPortsById,
+			nodeByPortId,
+		}: {
+			portId: PortId;
+			boardPortsById: Record<PortId, BoardPort>;
+			nodeByPortId: Record<PortId, Node>;
+		}) => {
+			const boardPort = boardPortsById[portId];
+			if (boardPort) {
+				return boardPort.role === "boardInput"
+					? { x: 1, y: 0 }
+					: { x: -1, y: 0 };
+			}
+
+			const node = nodeByPortId[portId];
+			if (!node) {
+				return null;
+			}
+
+			if (node.inputPorts[portId]) {
+				return rotateVector(0, -1, node.rotation);
+			}
+
+			if (node.outputPorts[portId]) {
+				return rotateVector(0, 1, node.rotation);
+			}
+
+			return null;
+		};
+
+		const drawWire = ({
+			fromPosition,
+			toPosition,
+			fromTangent,
+			toTangent,
+			color,
+			preview = false,
+		}: {
+			fromPosition: { x: number; y: number };
+			toPosition: { x: number; y: number };
+			fromTangent: { x: number; y: number };
+			toTangent: { x: number; y: number };
+			color: string;
+			preview?: boolean;
+		}) => {
+			const dx = toPosition.x - fromPosition.x;
+			const dy = toPosition.y - fromPosition.y;
+			const distance = Math.hypot(dx, dy);
+			const handleLength = Math.max(
+				0.75,
+				Math.min(2.4, distance * (Math.abs(dx) > Math.abs(dy) ? 0.38 : 0.28)),
+			);
+			const startControl = {
+				x: fromPosition.x + fromTangent.x * handleLength,
+				y: fromPosition.y + fromTangent.y * handleLength,
+			};
+			const endControl = {
+				x: toPosition.x + toTangent.x * handleLength,
+				y: toPosition.y + toTangent.y * handleLength,
+			};
+
+			context.save();
+			context.lineCap = "round";
+			context.lineJoin = "round";
+
+			context.beginPath();
+			context.moveTo(fromPosition.x, fromPosition.y);
+			context.bezierCurveTo(
+				startControl.x,
+				startControl.y,
+				endControl.x,
+				endControl.y,
+				toPosition.x,
+				toPosition.y,
+			);
+			context.lineWidth = 1 / 7;
+			context.strokeStyle = preview
+				? "rgba(148, 163, 184, 0.22)"
+				: "rgba(15, 23, 42, 0.12)";
+			context.stroke();
+
+			if (preview) {
+				context.setLineDash([0.18, 0.12]);
+			}
+			context.beginPath();
+			context.moveTo(fromPosition.x, fromPosition.y);
+			context.bezierCurveTo(
+				startControl.x,
+				startControl.y,
+				endControl.x,
+				endControl.y,
+				toPosition.x,
+				toPosition.y,
+			);
+			context.lineWidth = 1 / 24;
+			context.strokeStyle = color;
+			context.stroke();
+			context.restore();
+		};
+
 		const findPortAtMouse = () => {
 			const currentBoard = boardRef.current;
 			const { portById, boardPortsById, nodeByPortId, renderableNodeByPortId } =
@@ -371,17 +478,29 @@ export const BoardViewport = ({
 				if (!fromPosition || !toPosition) {
 					return;
 				}
+				const fromTangent = getPortTangent({
+					portId: wire.fromPortId,
+					boardPortsById,
+					nodeByPortId: renderableNodeByPortId,
+				});
+				const toTangent = getPortTangent({
+					portId: wire.toPortId,
+					boardPortsById,
+					nodeByPortId: renderableNodeByPortId,
+				});
+				if (!fromTangent || !toTangent) {
+					return;
+				}
 
-				context.lineWidth = 1 / 24;
-				context.strokeStyle = currentSimulation.snapshot.portValues[
-					wire.fromPortId
-				]
-					? "#2a9d8f"
-					: "#1f2933";
-				context.beginPath();
-				context.moveTo(fromPosition.x, fromPosition.y);
-				context.lineTo(toPosition.x, toPosition.y);
-				context.stroke();
+				drawWire({
+					fromPosition,
+					toPosition,
+					fromTangent,
+					toTangent,
+					color: currentSimulation.snapshot.portValues[wire.fromPortId]
+						? "#2a9d8f"
+						: "#1f2933",
+				});
 			});
 
 			if (
@@ -392,16 +511,29 @@ export const BoardViewport = ({
 				const sourcePosition = getPortPosition(selectedSourcePortIdRef.current);
 				if (sourcePosition) {
 					const mouseWorld = worldMousePosition();
-					context.lineWidth = 1 / 24;
-					context.strokeStyle = currentSimulation.snapshot.portValues[
-						selectedSourcePortIdRef.current
-					]
-						? "#2a9d8f"
-						: "#1f2933";
-					context.beginPath();
-					context.moveTo(sourcePosition.x, sourcePosition.y);
-					context.lineTo(mouseWorld.x, mouseWorld.y);
-					context.stroke();
+					const sourceTangent = getPortTangent({
+						portId: selectedSourcePortIdRef.current,
+						boardPortsById,
+						nodeByPortId: renderableNodeByPortId,
+					});
+					if (sourceTangent) {
+						const previewTargetTangent = {
+							x: -sourceTangent.x,
+							y: -sourceTangent.y,
+						};
+						drawWire({
+							fromPosition: sourcePosition,
+							toPosition: mouseWorld,
+							fromTangent: sourceTangent,
+							toTangent: previewTargetTangent,
+							color: currentSimulation.snapshot.portValues[
+								selectedSourcePortIdRef.current
+							]
+								? "#2a9d8f"
+								: "#1f2933",
+							preview: true,
+						});
+					}
 				}
 			}
 
