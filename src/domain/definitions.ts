@@ -14,7 +14,7 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	switch: {
 		kind: "switch",
 		displayName: "Switch",
-		color: "#ffd166",
+		color: "#d4a017",
 		minInputs: 0,
 		maxInputs: 0,
 		outputCount: 1,

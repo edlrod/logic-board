@@ -1,3 +1,4 @@
+import { useTheme } from "next-themes";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BoardViewport } from "./components/BoardViewport";
@@ -163,6 +164,8 @@ const App = () => {
 	} | null>(null);
 	const [dialogMode, setDialogMode] = useState<DialogMode>(null);
 	const [dialogValue, setDialogValue] = useState("");
+	const { resolvedTheme, setTheme } = useTheme();
+	const isDarkMode = resolvedTheme === "dark";
 
 	const activeBoard = workspace.boards[workspace.activeBoardId];
 	const activeExternalInputs =
@@ -408,7 +411,7 @@ const App = () => {
 	}, []);
 
 	return (
-		<div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.18),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#e8edf3_100%)]">
+		<div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.18),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#e8edf3_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.1),transparent_20%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
 			<BoardViewport
 				board={activeBoard}
 				externalInputs={activeExternalInputs}
@@ -418,6 +421,7 @@ const App = () => {
 				onBoardCommand={handleBoardCommand}
 				tool={tool}
 				buildRequest={buildRequest}
+				isDarkMode={isDarkMode}
 			/>
 			<Toolbar
 				isRootBoard={workspace.activeBoardId === workspace.rootBoardId}
@@ -427,6 +431,7 @@ const App = () => {
 				nodeDefinitions={activeNodeDefinitions}
 				tool={tool}
 				showHelp={showInfo}
+				isDarkMode={isDarkMode}
 				nodeKinds={paletteNodeKinds}
 				onToolChange={setTool}
 				onActiveBoardChange={(boardId) =>
@@ -452,6 +457,7 @@ const App = () => {
 					setDialogValue("");
 				}}
 				onHelpToggle={() => setShowInfo((visible) => !visible)}
+				onThemeToggle={() => setTheme(isDarkMode ? "light" : "dark")}
 			/>
 
 			<Dialog
@@ -492,8 +498,10 @@ const App = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			<div className="fixed bottom-4 right-4 flex gap-2">
-				<a href="https://edlrod.com" target="_blank" rel="noreferrer">edlrod</a>
+			<div className="fixed right-4 bottom-4 z-20 rounded-full border border-[rgba(16,42,67,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-[0.72rem] font-medium tracking-[0.08em] text-[#486581] uppercase shadow-[0_14px_36px_rgba(15,23,42,0.12)] backdrop-blur-md dark:border-white/10 dark:bg-[rgba(15,23,42,0.74)] dark:text-slate-400 dark:shadow-[0_14px_36px_rgba(2,6,23,0.36)]">
+				<a href="https://edlrod.com" target="_blank" rel="noreferrer">
+					edlrod
+				</a>
 				&bull;
 				<a
 					href="https://github.com/edlrod/logic-board"

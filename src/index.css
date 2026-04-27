@@ -156,6 +156,7 @@ body,
 		@apply font-sans;
 	}
 	a {
+		/* biome-ignore lint/suspicious/noUnknownAtRules: Tailwind apply */
 		@apply text-[#102a43] transition-colors hover:text-[#2a9d8f];
 	}
 }

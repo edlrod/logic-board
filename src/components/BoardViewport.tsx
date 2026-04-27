@@ -47,11 +47,12 @@ const CONTROL_LINES = [
 const drawRotationIndicator = (
 	context: CanvasRenderingContext2D,
 	rotation: number,
+	color: string,
 ) => {
 	context.save();
 	context.rotate(rotation);
-	context.strokeStyle = "#102a43";
-	context.fillStyle = "#102a43";
+	context.strokeStyle = color;
+	context.fillStyle = color;
 	context.lineWidth = 1 / 24;
 	context.beginPath();
 	context.moveTo(0, 0.18);
@@ -88,6 +89,7 @@ interface BoardViewportProps {
 		nodeKind: NodeKind;
 		inputCount: number;
 	} | null;
+	isDarkMode: boolean;
 }
 
 const BOARD_PORT_SIZE = 0.35;
@@ -101,6 +103,7 @@ export const BoardViewport = ({
 	nodeDefinitions,
 	resolveBoard,
 	buildRequest,
+	isDarkMode,
 }: BoardViewportProps) => {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const frameRef = useRef<number | null>(null);
@@ -276,6 +279,32 @@ export const BoardViewport = ({
 			return null;
 		};
 
+		const palette = isDarkMode
+			? {
+					gridAxis: "#64748b",
+					gridLine: "#1e293b",
+					wireInactive: "#cbd5e1",
+					wireShadow: "rgba(148, 163, 184, 0.18)",
+					wirePreviewShadow: "rgba(148, 163, 184, 0.16)",
+					nodeStroke: "#e2e8f0",
+					nodeText: "#e2e8f0",
+					portInactive: "#334155",
+					boardText: "#cbd5e1",
+					rotationIndicator: "#e2e8f0",
+				}
+			: {
+					gridAxis: "#4f5d75",
+					gridLine: "#d8dde6",
+					wireInactive: "#1f2933",
+					wireShadow: "rgba(15, 23, 42, 0.12)",
+					wirePreviewShadow: "rgba(148, 163, 184, 0.22)",
+					nodeStroke: "#102a43",
+					nodeText: "#102a43",
+					portInactive: "#d9e2ec",
+					boardText: "#102a43",
+					rotationIndicator: "#102a43",
+				};
+
 		const drawWire = ({
 			fromPosition,
 			toPosition,
@@ -323,8 +352,8 @@ export const BoardViewport = ({
 			);
 			context.lineWidth = 1 / 7;
 			context.strokeStyle = preview
-				? "rgba(148, 163, 184, 0.22)"
-				: "rgba(15, 23, 42, 0.12)";
+				? palette.wirePreviewShadow
+				: palette.wireShadow;
 			context.stroke();
 
 			if (preview) {
@@ -418,7 +447,7 @@ export const BoardViewport = ({
 				x <= canvas.width / camera.pixelsPerUnit / 2 + camera.position.x;
 				x += 1
 			) {
-				context.strokeStyle = x === 0 ? "#4f5d75" : "#d8dde6";
+				context.strokeStyle = x === 0 ? palette.gridAxis : palette.gridLine;
 				context.beginPath();
 				const xValue = (x - camera.position.x) * camera.pixelsPerUnit;
 				context.moveTo(xValue, -canvas.height / 2);
@@ -432,7 +461,7 @@ export const BoardViewport = ({
 				y <= canvas.height / camera.pixelsPerUnit / 2 + camera.position.y;
 				y += 1
 			) {
-				context.strokeStyle = y === 0 ? "#4f5d75" : "#d8dde6";
+				context.strokeStyle = y === 0 ? palette.gridAxis : palette.gridLine;
 				context.beginPath();
 				const yValue = (y - camera.position.y) * camera.pixelsPerUnit;
 				context.moveTo(-canvas.width / 2, yValue);
@@ -507,7 +536,7 @@ export const BoardViewport = ({
 					toTangent,
 					color: currentSimulation.snapshot.portValues[wire.fromPortId]
 						? "#2a9d8f"
-						: "#1f2933",
+						: palette.wireInactive,
 				});
 			});
 
@@ -538,7 +567,7 @@ export const BoardViewport = ({
 								selectedSourcePortIdRef.current
 							]
 								? "#2a9d8f"
-								: "#1f2933",
+								: palette.wireInactive,
 							preview: true,
 						});
 					}
@@ -563,12 +592,12 @@ export const BoardViewport = ({
 					context.globalAlpha = 0.72;
 				}
 				context.fillStyle = definition.color;
-				context.strokeStyle = "#102a43";
+				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
 				context.fillRect(-0.5, -0.5, 1, 1);
 				context.strokeRect(-0.5, -0.5, 1, 1);
 				context.rotate(-renderableNode.rotation);
-				context.fillStyle = "#102a43";
+				context.fillStyle = palette.nodeText;
 				context.font = "700 0.16px 'IBM Plex Mono', monospace";
 				context.textAlign = "center";
 				context.textBaseline = "middle";
@@ -586,7 +615,7 @@ export const BoardViewport = ({
 						? "#f4d35e"
 						: isActive
 							? "#2a9d8f"
-							: "#d9e2ec";
+							: palette.portInactive;
 					context.beginPath();
 					context.ellipse(
 						position.x,
@@ -609,7 +638,7 @@ export const BoardViewport = ({
 						? "#f4d35e"
 						: isActive
 							? "#2a9d8f"
-							: "#d9e2ec";
+							: palette.portInactive;
 					context.fillRect(
 						position.x - outletSize / 2,
 						position.y - outletSize / 2,
@@ -627,7 +656,7 @@ export const BoardViewport = ({
 					? "#f4d35e"
 					: isActive
 						? "#2a9d8f"
-						: "#d9e2ec";
+						: palette.portInactive;
 				context.beginPath();
 				context.ellipse(
 					position.x,
@@ -639,7 +668,7 @@ export const BoardViewport = ({
 					Math.PI * 2,
 				);
 				context.fill();
-				context.fillStyle = "#102a43";
+				context.fillStyle = palette.boardText;
 				context.font = "700 0.22px 'IBM Plex Sans', sans-serif";
 				context.textAlign = "right";
 				context.fillText(
@@ -657,14 +686,14 @@ export const BoardViewport = ({
 					? "#f4d35e"
 					: isActive
 						? "#2a9d8f"
-						: "#d9e2ec";
+						: palette.portInactive;
 				context.fillRect(
 					position.x - BOARD_PORT_SIZE / 2,
 					position.y - BOARD_PORT_SIZE / 2,
 					BOARD_PORT_SIZE,
 					BOARD_PORT_SIZE,
 				);
-				context.fillStyle = "#102a43";
+				context.fillStyle = palette.boardText;
 				context.font = "700 0.22px 'IBM Plex Sans', sans-serif";
 				context.textAlign = "left";
 				context.fillText(
@@ -685,12 +714,12 @@ export const BoardViewport = ({
 				context.globalAlpha = 0.72;
 				context.fillStyle = definition.color;
 				context.fillRect(-0.5, -0.5, 1, 1);
-				context.strokeStyle = "#102a43";
+				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
 				context.strokeRect(-0.5, -0.5, 1, 1);
-				drawRotationIndicator(context, 0);
+				drawRotationIndicator(context, 0, palette.rotationIndicator);
 				context.rotate(-heldNode.rotation);
-				context.fillStyle = "#102a43";
+				context.fillStyle = palette.nodeText;
 				context.font = "700 0.16px 'IBM Plex Mono', monospace";
 				context.textAlign = "center";
 				context.textBaseline = "middle";
@@ -930,7 +959,7 @@ export const BoardViewport = ({
 				window.cancelAnimationFrame(frameRef.current);
 			}
 		};
-	}, [nodeDefinitions, onBoardCommand, onExternalInputsChange]);
+	}, [isDarkMode, nodeDefinitions, onBoardCommand, onExternalInputsChange]);
 
 	return (
 		<div className="relative h-screen w-screen">
@@ -938,8 +967,8 @@ export const BoardViewport = ({
 				ref={canvasRef}
 				className="block h-screen w-screen touch-manipulation"
 			/>
-			<div className="pointer-events-none absolute bottom-7 left-7 z-8 text-[#102a43]">
-				<div className="mb-3 space-y-1.5 text-xs font-normal text-[#5b6573]">
+			<div className="pointer-events-none absolute bottom-7 left-7 z-8 text-[#102a43] dark:text-slate-100">
+				<div className="mb-3 space-y-1.5 text-xs font-normal text-[#5b6573] dark:text-slate-400">
 					{CONTROL_LINES.map((line) => (
 						<p key={line}>{line}</p>
 					))}

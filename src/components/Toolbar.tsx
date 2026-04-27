@@ -1,3 +1,4 @@
+import { MoonStar, SunMedium } from "lucide-react";
 import type { BoardId, NodeDefinitionRegistry, NodeKind } from "../domain";
 import type { Tool } from "../editor/types";
 import { Button } from "./ui/button";
@@ -19,6 +20,7 @@ interface ToolbarProps {
 	nodeDefinitions: NodeDefinitionRegistry;
 	tool: Tool;
 	showHelp: boolean;
+	isDarkMode: boolean;
 	nodeKinds: NodeKind[];
 	onToolChange(tool: Tool): void;
 	onActiveBoardChange(boardId: BoardId): void;
@@ -30,6 +32,7 @@ interface ToolbarProps {
 	onExport(): void;
 	onImport(): void;
 	onHelpToggle(): void;
+	onThemeToggle(): void;
 }
 
 const getToolbarButtonClassName = (selected = false, extra = "") =>
@@ -37,7 +40,7 @@ const getToolbarButtonClassName = (selected = false, extra = "") =>
 		"rounded-full border uppercase tracking-[0.08em]",
 		selected
 			? "border-[#d9b54c] bg-[#f4d35e] text-[#102a43] shadow-[0_10px_24px_rgba(244,211,94,0.28)] hover:bg-[#f4d35e]"
-			: "border-[rgba(16,42,67,0.16)] bg-[rgba(255,255,255,0.94)] text-[#102a43] hover:border-[rgba(16,42,67,0.28)] hover:bg-[rgba(255,255,255,0.94)]",
+			: "border-[rgba(16,42,67,0.16)] bg-[rgba(255,255,255,0.94)] text-[#102a43] hover:border-[rgba(16,42,67,0.28)] hover:bg-[rgba(255,255,255,0.94)] dark:border-white/12 dark:bg-[rgba(15,23,42,0.82)] dark:text-slate-100 dark:hover:border-white/22 dark:hover:bg-[rgba(15,23,42,0.82)]",
 		extra,
 	]
 		.filter(Boolean)
@@ -51,6 +54,7 @@ export const Toolbar = ({
 	nodeDefinitions,
 	tool,
 	showHelp,
+	isDarkMode,
 	nodeKinds,
 	onToolChange,
 	onActiveBoardChange,
@@ -62,12 +66,13 @@ export const Toolbar = ({
 	onExport,
 	onImport,
 	onHelpToggle,
+	onThemeToggle,
 }: ToolbarProps) => {
 	return (
 		<>
-			<header className="fixed top-4 right-4 left-4 z-10 flex gap-3 items-center overflow-x-auto rounded-[20px] border border-[rgba(16,42,67,0.12)] bg-[rgba(255,255,255,0.84)] p-3 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-lg">
-				<div className="flex items-center gap-2 rounded-full bg-[rgba(16,42,67,0.06)] px-3 py-1">
-					<span className="text-[0.72rem] font-bold tracking-[0.08em] text-[#5b6573] uppercase">
+			<header className="fixed top-4 right-4 left-4 z-10 flex items-center gap-3 overflow-x-auto rounded-[20px] border border-[rgba(16,42,67,0.12)] bg-[rgba(255,255,255,0.84)] p-3 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-lg dark:border-white/10 dark:bg-[rgba(15,23,42,0.74)] dark:shadow-[0_18px_48px_rgba(2,6,23,0.38)]">
+				<div className="flex items-center gap-2 rounded-full bg-[rgba(16,42,67,0.06)] px-3 py-1 dark:bg-white/6">
+					<span className="text-[0.72rem] font-bold tracking-[0.08em] text-[#5b6573] uppercase dark:text-slate-400">
 						Board
 					</span>
 					<Select
@@ -78,7 +83,7 @@ export const Toolbar = ({
 							}
 						}}
 					>
-						<SelectTrigger className="min-w-36 rounded-full bg-white font-semibold text-[#102a43]">
+						<SelectTrigger className="min-w-36 rounded-full bg-white font-semibold text-[#102a43] dark:bg-slate-900 dark:text-slate-100">
 							<SelectValue>{boardName}</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
@@ -106,7 +111,7 @@ export const Toolbar = ({
 						Rename
 					</Button>
 				</div>
-				<div className="flex flex-wrap gap-2 rounded-full bg-[rgba(16,42,67,0.06)] p-1">
+				<div className="flex flex-wrap gap-2 rounded-full bg-[rgba(16,42,67,0.06)] p-1 dark:bg-white/6">
 					{TOOL_SEQUENCE.map((toolName) => (
 						<Button
 							key={toolName}
@@ -119,7 +124,7 @@ export const Toolbar = ({
 						</Button>
 					))}
 				</div>
-				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] lg:h-auto lg:w-px lg:self-stretch" />
+				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] dark:bg-white/10 lg:h-auto lg:w-px lg:self-stretch" />
 				<div className="flex max-w-full flex-wrap gap-2 lg:max-w-[50vw]">
 					{nodeKinds.map((nodeKind) => (
 						<Button
@@ -174,6 +179,19 @@ export const Toolbar = ({
 						type="button"
 						variant="outline"
 						className={getToolbarButtonClassName(false)}
+						onClick={onThemeToggle}
+					>
+						{isDarkMode ? (
+							<MoonStar className="size-4" />
+						) : (
+							<SunMedium className="size-4" />
+						)}
+						{isDarkMode ? "Dark" : "Light"}
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						className={getToolbarButtonClassName(false)}
 						onClick={onHelpToggle}
 					>
 						Help
@@ -182,7 +200,7 @@ export const Toolbar = ({
 			</header>
 
 			{showHelp ? (
-				<aside className="fixed right-4 bottom-28 z-9 w-[min(360px,calc(100vw-32px))] rounded-3xl bg-[rgba(16,42,67,0.92)] p-5 text-[#f8fafc] shadow-[0_24px_60px_rgba(15,23,42,0.24)] lg:top-25 lg:bottom-auto">
+				<aside className="fixed right-4 bottom-28 z-9 w-[min(360px,calc(100vw-32px))] rounded-3xl bg-[rgba(16,42,67,0.92)] p-5 text-[#f8fafc] shadow-[0_24px_60px_rgba(15,23,42,0.24)] dark:bg-[rgba(2,6,23,0.92)] dark:shadow-[0_24px_60px_rgba(2,6,23,0.44)] lg:top-25 lg:bottom-auto">
 					<h1 className="m-0 mb-3 text-[1.4rem] leading-[1.1] font-bold">
 						Logic Board
 					</h1>
