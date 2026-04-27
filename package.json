@@ -6,12 +6,16 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
+		"check": "biome check .",
+		"format": "biome format --write .",
 		"lint": "biome check --write .",
 		"preview": "vite preview"
 	},
 	"dependencies": {
+		"@tailwindcss/vite": "^4.2.4",
 		"react": "^19.2.5",
-		"react-dom": "^19.2.5"
+		"react-dom": "^19.2.5",
+		"tailwindcss": "^4.2.4"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.3",

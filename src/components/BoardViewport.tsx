@@ -35,6 +35,15 @@ interface HeldNode {
 	rotation: number;
 }
 
+const CONTROL_LINES = [
+	"1 Test",
+	"2 Design",
+	"R Rotate",
+	"Ctrl Place Multiple",
+	"Right Drag Pan",
+	"Right Click Cancel/Delete",
+];
+
 const drawRotationIndicator = (
 	context: CanvasRenderingContext2D,
 	rotation: number,
@@ -552,24 +561,6 @@ export const BoardViewport = ({
 				context.fillText(String(heldNode.inputCount), 0, -0.34);
 				context.restore();
 			}
-
-			context.resetTransform();
-			const controlLines = [
-				"1 Test",
-				"2 Design",
-				"R Rotate",
-				"Ctrl Place Multiple",
-				"Right Drag Pan",
-				"Right Click Cancel/Delete",
-			];
-			context.fillStyle = "#5b6573";
-			context.font = "400 12px 'IBM Plex Sans', sans-serif";
-			controlLines.forEach((line, index) => {
-				context.fillText(line, 28, canvas.height - 146 + index * 18);
-			});
-			context.fillStyle = "#0c0e12";
-			context.font = "700 20px 'IBM Plex Sans', sans-serif";
-			context.fillText(currentBoard.name, 28, canvas.height - 28);
 		};
 
 		const handleMouseMove = (event: MouseEvent) => {
@@ -681,6 +672,10 @@ export const BoardViewport = ({
 						} else if (heldNode.nodeId) {
 							if (keyStateRef.current.Control) {
 								onBoardCommand({
+									type: "deleteNode",
+									nodeId: heldNode.nodeId,
+								});
+								onBoardCommand({
 									type: "addNode",
 									kind: heldNode.nodeKind,
 									position: targetCell,
@@ -708,20 +703,21 @@ export const BoardViewport = ({
 							}
 						}
 					}
-				} else if (hoveredPort?.direction === "output") {
-					selectedSourcePortIdRef.current = hoveredPort.id;
-				} else if (
-					selectedSourcePortIdRef.current &&
-					hoveredPort?.direction === "input"
-				) {
-					onBoardCommand({
-						type: "connectPorts",
-						fromPortId: selectedSourcePortIdRef.current,
-						toPortId: hoveredPort.id,
-					});
-					if (!keyStateRef.current.Shift) {
+				} else if (selectedSourcePortIdRef.current) {
+					if (hoveredPort?.direction === "input") {
+						onBoardCommand({
+							type: "connectPorts",
+							fromPortId: selectedSourcePortIdRef.current,
+							toPortId: hoveredPort.id,
+						});
+						if (!keyStateRef.current.Shift) {
+							selectedSourcePortIdRef.current = null;
+						}
+					} else {
 						selectedSourcePortIdRef.current = null;
 					}
+				} else if (hoveredPort?.direction === "output") {
+					selectedSourcePortIdRef.current = hoveredPort.id;
 				} else if (selectedNode) {
 					heldNodeRef.current = {
 						source: "existing",
@@ -772,6 +768,8 @@ export const BoardViewport = ({
 		};
 
 		resizeCanvas();
+		draw();
+
 		window.addEventListener("resize", resizeCanvas);
 		window.addEventListener("mousemove", handleMouseMove);
 		window.addEventListener("keydown", handleKeyDown);
@@ -780,7 +778,6 @@ export const BoardViewport = ({
 		canvas.addEventListener("mouseup", handleMouseUp);
 		canvas.addEventListener("wheel", handleWheel);
 		canvas.addEventListener("contextmenu", handleContextMenu);
-		draw();
 
 		return () => {
 			window.removeEventListener("resize", resizeCanvas);
@@ -797,5 +794,20 @@ export const BoardViewport = ({
 		};
 	}, [onBoardCommand, onExternalInputsChange]);
 
-	return <canvas ref={canvasRef} className="board-canvas" />;
+	return (
+		<div className="relative h-screen w-screen">
+			<canvas
+				ref={canvasRef}
+				className="block h-screen w-screen touch-manipulation"
+			/>
+			<div className="pointer-events-none absolute bottom-7 left-7 z-8 text-[#102a43]">
+				<div className="mb-3 space-y-1.5 text-xs font-normal text-[#5b6573]">
+					{CONTROL_LINES.map((line) => (
+						<p key={line}>{line}</p>
+					))}
+				</div>
+				<h2 className="text-xl leading-none font-bold">{board.name}</h2>
+			</div>
+		</div>
+	);
 };

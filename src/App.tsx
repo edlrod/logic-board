@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import "./App.css";
 import { BoardViewport } from "./components/BoardViewport";
 import { Toolbar } from "./components/Toolbar";
 import {
@@ -131,7 +130,7 @@ const App = () => {
 	}, []);
 
 	return (
-		<div className="app-shell">
+		<div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.18),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#e8edf3_100%)]">
 			<BoardViewport
 				board={board}
 				externalInputs={externalInputs}
