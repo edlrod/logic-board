@@ -20,13 +20,25 @@ export const createWorkspaceDocument = (
 	externalInputsByBoardId: workspace.externalInputsByBoardId,
 });
 
+const encodeBase64Url = (value: string) =>
+	btoa(value).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+
+const decodeBase64Url = (value: string) => {
+	const normalizedValue = value
+		.replaceAll(" ", "+")
+		.replaceAll("-", "+")
+		.replaceAll("_", "/");
+	const paddingLength = (4 - (normalizedValue.length % 4)) % 4;
+	return atob(`${normalizedValue}${"=".repeat(paddingLength)}`);
+};
+
 export const encodeWorkspaceDocument = (
 	document: SerializedWorkspaceDocumentV1,
-) => btoa(JSON.stringify(document));
+) => encodeBase64Url(JSON.stringify(document));
 
 export const decodeUnknownWorkspaceDocument = (
 	encodedDocument: string,
-): unknown => JSON.parse(atob(encodedDocument));
+): unknown => JSON.parse(decodeBase64Url(encodedDocument));
 
 const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null;

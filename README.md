@@ -114,7 +114,7 @@ src/
 
 ## Import / Export Format
 
-Export writes a base64-encoded versioned board document to the clipboard.
+Export writes a URL-safe base64 encoded versioned workspace document to the clipboard.
 You can also load an exported workspace on startup with a query param like
 `?import=<encoded-workspace-data>`.
 
