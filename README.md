@@ -1,27 +1,63 @@
 # Logic Board
 
-Logic Board is a small React + TypeScript sandbox for building and testing simple logic circuits on a 2D canvas, inspired by that of LittleBigPlanet 2.
+Logic Board is a React + TypeScript logic-circuit sandbox with a modular architecture built around explicit boards, nodes, ports, and wires. It is inspired by that of LittleBigPlanet 2.
 
-You can place gates, wire them together, toggle switches, and export or import board state as a compact serialized string.
+The current app lets you:
+
+- place logic nodes on a canvas
+- wire outputs to inputs
+- add board-level inputs and outputs
+- toggle switches and board inputs
+- simulate the board as combinational logic
+- export and import versioned board documents
+
+## Architecture
+
+The refactor is complete enough that the app no longer runs on the old object-reference graph model.
+
+The main layers are:
+
+- `src/domain`
+  Plain data structures and pure board commands
+- `src/simulation`
+  Graph building and combinational board evaluation
+- `src/serialization`
+  Versioned import/export document handling
+- `src/editor`
+  Viewport camera and geometry helpers
+- `src/components`
+  React UI, including `BoardViewport` and `Toolbar`
+
+Core domain terms:
+
+- `Board`: a simulated circuit container
+- `Node`: a logic unit placed on a board
+- `Port`: an input or output owned by a board or node
+- `Wire`: a connection between ports
+- `BoardViewport`: the canvas surface that displays and edits a board
 
 ## Features
 
 - Canvas-based board editor with pan and zoom
-- Built-in chip types: `SWITCH`, `NODE`, `NOT`, `AND`, `OR`, `XOR`
-- Live signal propagation through connected chips
-- Rotation, dragging, wiring, deletion, and import/export support
+- Built-in node kinds: `switch`, `buffer`, `not`, `and`, `or`, `xor`
+- Board-level inputs and outputs
+- First-class wire model instead of direct node references
+- Pure combinational simulation with validation and cycle detection
+- Versioned board document export/import
 - React frontend with Vite, TypeScript, and Biome
 
 ## Controls
 
-- `Interact` mode: drag chips and click switches to toggle them
-- `Design` mode: place chips on the grid
-- `Wire` mode: click an output, then click an input to create a connection
-- `R`: rotate the selected design preview or a dragged chip
-- Mouse wheel in `Design`: change input count for chips that support variable inputs
-- Mouse wheel outside that case: zoom
+- `Test` mode: click switches or board inputs to toggle them
+- `Design` mode: click a node button to put a node in your hand, click an existing node to pick it up, and place it on the grid
+- `Design` mode with an empty hand: click an output port, then an input port to connect them
+- `1`: switch to `Test`
+- `2`: switch to `Design`
+- `R`: rotate the held node preview
+- Hold `Ctrl` while placing a new node: place another copy and keep it in your hand
+- Mouse wheel: zoom
 - Right mouse drag: pan the camera
-- Right click in `Design`: remove a chip or clear its connections
+- Right click in `Design`: delete a node or board port
 
 ## Development
 
@@ -44,24 +80,47 @@ Useful scripts:
 
 ```text
 src/
-  App.tsx         React app and canvas interaction layer
-  App.css         Application UI styling
-  main.tsx        React entrypoint
-  index.css       Global styles
-  lib/
-    Board.ts      Board model
-    Camera.ts     Camera transforms and zoom helpers
-    Chip.ts       Chip definitions, simulation, serialization
-    types.ts      Shared type definitions
+  App.tsx
+  App.css
+  main.tsx
+  index.css
+  components/
+    BoardViewport.tsx
+    Toolbar.tsx
+  domain/
+    commands.ts
+    definitions.ts
+    factories.ts
+    ids.ts
+    index.ts
+    ports.ts
+    types.ts
+    validateBoard.ts
+  simulation/
+    evaluateBoard.ts
+    graph.ts
+    index.ts
+  serialization/
+    boardDocument.ts
+    index.ts
+    migrateBoardDocument.ts
+  editor/
+    camera.ts
+    geometry.ts
+    types.ts
 ```
 
 ## Import / Export Format
 
-Export copies the current board to the clipboard as a base64-encoded JSON payload.
+Export writes a base64-encoded versioned board document to the clipboard.
 
-Import expects that same format and replaces the current board state.
+Current format:
 
-## Notes
+```ts
+{
+  version: 1,
+  board: Board
+}
+```
 
-- This is a single-board editor. Nested or reusable custom boards are not part of the current app.
-- Signal updates are propagated recursively through the graph. Very complex feedback loops are not a primary use case yet.
+Import expects that format and replaces the current board state.
