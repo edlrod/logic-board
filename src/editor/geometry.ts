@@ -50,6 +50,13 @@ export const getNodeOutputPortPosition = (
 	xOffset = 0,
 	yOffset = 0,
 ): Point => {
+	if (node.kind === "buffer") {
+		return {
+			x: node.position.x + 0.5,
+			y: node.position.y + 0.5,
+		};
+	}
+
 	const outletSize = getNodeOutletSize(node);
 	const outputCount = Math.max(Object.keys(node.outputPorts).length, 1);
 	const preRotation = {

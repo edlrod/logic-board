@@ -212,7 +212,8 @@ export const Toolbar = ({
 					</p>
 					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
 						Design: pick up nodes, place them, or wire by clicking an output
-						port and then an input port when your hand is empty.
+						port and then an input port when your hand is empty. Clicking empty
+						space while wiring drops a router dot and keeps the wire going.
 					</p>
 					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
 						Every board is automatically available as a reusable module node in

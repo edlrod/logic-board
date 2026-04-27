@@ -119,8 +119,9 @@ export interface SimulationResult {
 export type BoardCommand =
 	| {
 			type: "addNode";
-			kind: NodeKind;
-			position: Point;
+			node?: Node;
+			kind?: NodeKind;
+			position?: Point;
 			rotation?: number;
 			inputCount?: number;
 	  }

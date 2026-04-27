@@ -37,14 +37,7 @@ import {
 import { reconcileBoardModuleNodes } from "./workspace/reconcileModules";
 import type { Workspace } from "./workspace/types";
 
-const PALETTE_NODE_KINDS: NodeKind[] = [
-	"switch",
-	"buffer",
-	"not",
-	"and",
-	"or",
-	"xor",
-];
+const PALETTE_NODE_KINDS: NodeKind[] = ["switch", "not", "and", "or", "xor"];
 
 type DialogMode = "new-board" | "rename-board" | "import" | "export" | null;
 

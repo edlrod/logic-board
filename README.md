@@ -39,7 +39,8 @@ Core domain terms:
 ## Features
 
 - Canvas-based board editor with pan and zoom
-- Built-in node kinds: `switch`, `buffer`, `not`, `and`, `or`, `xor`
+- Built-in node kinds: `switch`, `not`, `and`, `or`, `xor`
+- Auto-inserted router dots for shaping wires in `Design` mode
 - Board-level inputs and outputs
 - First-class wire model instead of direct node references
 - Pure combinational simulation with validation and cycle detection
@@ -51,6 +52,7 @@ Core domain terms:
 - `Test` mode: click switches or board inputs to toggle them
 - `Design` mode: click a node button to put a node in your hand, click an existing node to pick it up, and place it on the grid
 - `Design` mode with an empty hand: click an output port, then an input port to connect them
+- `Design` mode while wiring: click empty space to insert a router dot and continue the wire
 - `1`: switch to `Test`
 - `2`: switch to `Design`
 - `R`: rotate the held node preview

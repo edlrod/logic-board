@@ -204,13 +204,14 @@ export const applyBoardCommand = (
 			return withValidation(
 				withNodeAdded(
 					board,
-					createNode({
-						kind: command.kind,
-						position: command.position,
-						rotation: command.rotation,
-						inputCount: command.inputCount,
-						definitions,
-					}),
+					command.node ??
+						createNode({
+							kind: command.kind ?? "buffer",
+							position: command.position ?? { x: 0, y: 0 },
+							rotation: command.rotation,
+							inputCount: command.inputCount,
+							definitions,
+						}),
 				),
 			);
 

@@ -23,8 +23,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	buffer: {
 		kind: "buffer",
-		displayName: "Buffer",
-		color: "#cdb4db",
+		displayName: "Router",
+		color: "#7bdff2",
 		minInputs: 1,
 		maxInputs: 1,
 		outputCount: 1,

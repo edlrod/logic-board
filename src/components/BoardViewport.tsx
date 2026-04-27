@@ -4,6 +4,7 @@ import {
 	type BoardCommand,
 	type BoardPort,
 	buildPortLookup,
+	createNode,
 	type Node,
 	type NodeDefinitionRegistry,
 	type NodeKind,
@@ -71,6 +72,16 @@ const rotateVector = (x: number, y: number, rotation: number) => ({
 	x: x * Math.cos(rotation) - y * Math.sin(rotation),
 	y: x * Math.sin(rotation) + y * Math.cos(rotation),
 });
+
+const isRouterNodeKind = (nodeKind: NodeKind) => nodeKind === "buffer";
+
+const getCardinalRotationForInputVector = (x: number, y: number) => {
+	if (Math.abs(x) >= Math.abs(y)) {
+		return x >= 0 ? Math.PI / 2 : (Math.PI * 3) / 2;
+	}
+
+	return y >= 0 ? Math.PI : 0;
+};
 
 interface BoardViewportProps {
 	board: Board;
@@ -395,7 +406,10 @@ export const BoardViewport = ({
 				const size =
 					port.ownerKind === "board"
 						? BOARD_PORT_SIZE
-						: getNodeOutletSize(getRenderableNode(nodeByPortId[port.id]));
+						: nodeByPortId[port.id]?.kind === "buffer" &&
+								port.direction === "output"
+							? BOARD_PORT_SIZE
+							: getNodeOutletSize(getRenderableNode(nodeByPortId[port.id]));
 				if (
 					mouseWorld.x > position.x - size / 2 &&
 					mouseWorld.x < position.x + size / 2 &&
@@ -580,6 +594,24 @@ export const BoardViewport = ({
 					heldNodeRef.current?.source === "existing" &&
 					heldNodeRef.current.nodeId === node.id;
 				const definition = nodeDefinitions[node.kind];
+				const isRouterNode = isRouterNodeKind(node.kind);
+				const routerOutputPort = isRouterNode
+					? getOrderedNodeOutputPorts(node)[0]
+					: null;
+				const routerInputPort = isRouterNode
+					? getOrderedNodeInputPorts(node)[0]
+					: null;
+				const isRouterHovered =
+					(hoveredPortIdRef.current !== null &&
+						hoveredPortIdRef.current === routerOutputPort?.id) ||
+					(selectedSourcePortIdRef.current !== null &&
+						hoveredPortIdRef.current === routerInputPort?.id);
+				const isRouterActive = Boolean(
+					(routerOutputPort &&
+						currentSimulation.snapshot.portValues[routerOutputPort.id]) ||
+						(routerInputPort &&
+							currentSimulation.snapshot.portValues[routerInputPort.id]),
+				);
 
 				context.save();
 				context.translate(
@@ -591,17 +623,38 @@ export const BoardViewport = ({
 					context.scale(1.1, 1.1);
 					context.globalAlpha = 0.72;
 				}
-				context.fillStyle = definition.color;
+				context.fillStyle = isRouterNode
+					? isRouterHovered
+						? "#f4d35e"
+						: isRouterActive
+							? "#2a9d8f"
+							: definition.color
+					: definition.color;
 				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
-				context.fillRect(-0.5, -0.5, 1, 1);
-				context.strokeRect(-0.5, -0.5, 1, 1);
-				context.rotate(-renderableNode.rotation);
-				context.fillStyle = palette.nodeText;
-				context.font = "700 0.16px 'IBM Plex Mono', monospace";
-				context.textAlign = "center";
-				context.textBaseline = "middle";
-				context.fillText(definition.displayName.toUpperCase(), 0, 0);
+				if (isRouterNode) {
+					context.beginPath();
+					context.ellipse(
+						0,
+						0,
+						BOARD_PORT_SIZE / 2,
+						BOARD_PORT_SIZE / 2,
+						0,
+						0,
+						Math.PI * 2,
+					);
+					context.fill();
+					context.stroke();
+				} else {
+					context.fillRect(-0.5, -0.5, 1, 1);
+					context.strokeRect(-0.5, -0.5, 1, 1);
+					context.rotate(-renderableNode.rotation);
+					context.fillStyle = palette.nodeText;
+					context.font = "700 0.16px 'IBM Plex Mono', monospace";
+					context.textAlign = "center";
+					context.textBaseline = "middle";
+					context.fillText(definition.displayName.toUpperCase(), 0, 0);
+				}
 				context.restore();
 
 				getOrderedNodeInputPorts(node).forEach((port) => {
@@ -630,6 +683,10 @@ export const BoardViewport = ({
 				});
 
 				getOrderedNodeOutputPorts(node).forEach((port) => {
+					if (isRouterNode) {
+						return;
+					}
+
 					const position = getNodeOutputPortPosition(renderableNode, port);
 					const isHovered = hoveredPortIdRef.current === port.id;
 					const isActive = currentSimulation.snapshot.portValues[port.id];
@@ -707,25 +764,43 @@ export const BoardViewport = ({
 				const heldNode = heldNodeRef.current;
 				const previewPosition = getHeldPreviewPosition();
 				const definition = nodeDefinitions[heldNode.nodeKind];
+				const isRouterNode = isRouterNodeKind(heldNode.nodeKind);
 				context.save();
 				context.translate(previewPosition.x + 0.5, previewPosition.y + 0.5);
 				context.rotate(heldNode.rotation);
 				context.scale(1.1, 1.1);
 				context.globalAlpha = 0.72;
 				context.fillStyle = definition.color;
-				context.fillRect(-0.5, -0.5, 1, 1);
 				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
-				context.strokeRect(-0.5, -0.5, 1, 1);
+				if (isRouterNode) {
+					context.beginPath();
+					context.ellipse(
+						0,
+						0,
+						BOARD_PORT_SIZE / 2,
+						BOARD_PORT_SIZE / 2,
+						0,
+						0,
+						Math.PI * 2,
+					);
+					context.fill();
+					context.stroke();
+				} else {
+					context.fillRect(-0.5, -0.5, 1, 1);
+					context.strokeRect(-0.5, -0.5, 1, 1);
+				}
 				drawRotationIndicator(context, 0, palette.rotationIndicator);
-				context.rotate(-heldNode.rotation);
-				context.fillStyle = palette.nodeText;
-				context.font = "700 0.16px 'IBM Plex Mono', monospace";
-				context.textAlign = "center";
-				context.textBaseline = "middle";
-				context.fillText(definition.displayName.toUpperCase(), 0, 0);
-				context.font = "700 0.18px 'IBM Plex Mono', monospace";
-				context.fillText(String(heldNode.inputCount), 0, -0.34);
+				if (!isRouterNode) {
+					context.rotate(-heldNode.rotation);
+					context.fillStyle = palette.nodeText;
+					context.font = "700 0.16px 'IBM Plex Mono', monospace";
+					context.textAlign = "center";
+					context.textBaseline = "middle";
+					context.fillText(definition.displayName.toUpperCase(), 0, 0);
+					context.font = "700 0.18px 'IBM Plex Mono', monospace";
+					context.fillText(String(heldNode.inputCount), 0, -0.34);
+				}
 				context.restore();
 			}
 		};
@@ -881,7 +956,51 @@ export const BoardViewport = ({
 							selectedSourcePortIdRef.current = null;
 						}
 					} else {
-						selectedSourcePortIdRef.current = null;
+						const targetCell = getHeldGridPosition();
+						const occupiedNode = Object.values(boardRef.current.nodes).find(
+							(node) =>
+								node.position.x === targetCell.x &&
+								node.position.y === targetCell.y,
+						);
+						if (!occupiedNode && !hoveredPort) {
+							const sourcePosition = getPortPosition(
+								selectedSourcePortIdRef.current,
+							);
+							const routerCenter = {
+								x: targetCell.x + 0.5,
+								y: targetCell.y + 0.5,
+							};
+							const routerRotation = sourcePosition
+								? getCardinalRotationForInputVector(
+										sourcePosition.x - routerCenter.x,
+										sourcePosition.y - routerCenter.y,
+									)
+								: 0;
+							const routerNode = createNode({
+								kind: "buffer",
+								position: targetCell,
+								rotation: routerRotation,
+								definitions: nodeDefinitions,
+							});
+							const routerInputPortId = Object.keys(routerNode.inputPorts)[0];
+							const routerOutputPortId = Object.keys(routerNode.outputPorts)[0];
+							if (routerInputPortId && routerOutputPortId) {
+								onBoardCommand({
+									type: "addNode",
+									node: routerNode,
+								});
+								onBoardCommand({
+									type: "connectPorts",
+									fromPortId: selectedSourcePortIdRef.current,
+									toPortId: routerInputPortId,
+								});
+								selectedSourcePortIdRef.current = routerOutputPortId;
+							} else {
+								selectedSourcePortIdRef.current = null;
+							}
+						} else {
+							selectedSourcePortIdRef.current = null;
+						}
 					}
 				} else if (hoveredPort?.direction === "output") {
 					selectedSourcePortIdRef.current = hoveredPort.id;
