@@ -9,11 +9,10 @@ The current app lets you:
 - add board-level inputs and outputs
 - toggle switches and board inputs
 - simulate the board as combinational logic
-- export and import versioned board documents
+- use any board as a node inside another board
+- export and import versioned workspace documents
 
 ## Architecture
-
-The refactor is complete enough that the app no longer runs on the old object-reference graph model.
 
 The main layers are:
 
@@ -25,11 +24,14 @@ The main layers are:
   Versioned import/export document handling
 - `src/editor`
   Viewport camera and geometry helpers
+- `src/workspace`
+  Multi-board container and module reconciliation
 - `src/components`
-  React UI, including `BoardViewport` and `Toolbar`
+  React UI, including `BoardViewport`, `Toolbar`, and shadcn primitives
 
 Core domain terms:
 
+- `Workspace`: a collection of boards with a root and active board
 - `Board`: a simulated circuit container
 - `Node`: a logic unit placed on a board
 - `Port`: an input or output owned by a board or node
@@ -39,12 +41,12 @@ Core domain terms:
 ## Features
 
 - Canvas-based board editor with pan and zoom
-- Built-in node kinds: `switch`, `not`, `and`, `or`, `xor`
+- Built-in node kinds: `switch`, `not`, `and`, `or`, `xor`; any board can also be used as a `module:<boardId>` node in another board
 - Auto-inserted router dots for shaping wires in `Design` mode
 - Board-level inputs and outputs
 - First-class wire model instead of direct node references
 - Pure combinational simulation with validation and cycle detection
-- Versioned board document export/import
+- Versioned workspace document export/import
 - React frontend with Vite, TypeScript, and Biome
 
 ## Controls
@@ -73,22 +75,21 @@ bun run dev
 Useful scripts:
 
 - `bun run dev` starts the local dev server
-- `bun run build` creates a production build
+- `bun run build` creates a production build (`tsc -b && vite build`)
+- `bun run lint` runs Biome checks and applies fixes (`biome check --write .`)
 - `bun run preview` serves the built app locally
-- `bun run check` runs Biome checks
-- `bun run format` formats the repo with Biome
 
 ## Project Structure
 
 ```text
 src/
   App.tsx
-  App.css
   main.tsx
   index.css
   components/
     BoardViewport.tsx
     Toolbar.tsx
+    ui/
   domain/
     commands.ts
     definitions.ts
@@ -104,12 +105,18 @@ src/
     index.ts
   serialization/
     boardDocument.ts
-    index.ts
+    workspaceDocument.ts
     migrateBoardDocument.ts
+    index.ts
   editor/
     camera.ts
     geometry.ts
     types.ts
+  workspace/
+    types.ts
+    reconcileModules.ts
+  lib/
+    utils.ts
 ```
 
 ## Import / Export Format
@@ -123,8 +130,12 @@ Current format:
 ```ts
 {
   version: 1,
-  board: Board
+  rootBoardId?: BoardId,
+  activeBoardId: BoardId,
+  boards: Board[],
+  publishedBoardIds?: BoardId[],
+  externalInputsByBoardId?: Record<BoardId, Record<PortId, boolean>>
 }
 ```
 
-Import expects that format and replaces the current board state.
+Import expects that format and replaces the current workspace state.
