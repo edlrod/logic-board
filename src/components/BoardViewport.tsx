@@ -104,6 +104,40 @@ interface BoardViewportProps {
 }
 
 const BOARD_PORT_SIZE = 0.35;
+const ROUTER_RADIUS = 0.2;
+
+const drawSolderJunction = (
+	context: CanvasRenderingContext2D,
+	wireColor: string,
+	strokeColor: string,
+) => {
+	context.beginPath();
+	context.moveTo(0, -ROUTER_RADIUS);
+	context.lineTo(0, -0.5);
+	context.lineWidth = 1 / 28;
+	context.strokeStyle = wireColor;
+	context.stroke();
+	context.strokeStyle = strokeColor;
+	context.beginPath();
+	context.ellipse(0, 0, ROUTER_RADIUS, ROUTER_RADIUS, 0, 0, Math.PI * 2);
+	context.fill();
+	context.stroke();
+	context.save();
+	context.beginPath();
+	context.ellipse(
+		0,
+		0,
+		ROUTER_RADIUS * 0.5,
+		ROUTER_RADIUS * 0.5,
+		0,
+		0,
+		Math.PI * 2,
+	);
+	context.lineWidth = 1 / 44;
+	context.globalAlpha = 0.3;
+	context.stroke();
+	context.restore();
+};
 
 export const BoardViewport = ({
 	board,
@@ -643,18 +677,11 @@ export const BoardViewport = ({
 				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
 				if (isRouterNode) {
-					context.beginPath();
-					context.ellipse(
-						0,
-						0,
-						BOARD_PORT_SIZE / 2,
-						BOARD_PORT_SIZE / 2,
-						0,
-						0,
-						Math.PI * 2,
+					drawSolderJunction(
+						context,
+						isRouterActive ? palette.active : palette.wireInactive,
+						palette.nodeStroke,
 					);
-					context.fill();
-					context.stroke();
 				} else {
 					context.fillRect(-0.5, -0.5, 1, 1);
 					context.strokeRect(-0.5, -0.5, 1, 1);
@@ -784,18 +811,7 @@ export const BoardViewport = ({
 				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
 				if (isRouterNode) {
-					context.beginPath();
-					context.ellipse(
-						0,
-						0,
-						BOARD_PORT_SIZE / 2,
-						BOARD_PORT_SIZE / 2,
-						0,
-						0,
-						Math.PI * 2,
-					);
-					context.fill();
-					context.stroke();
+					drawSolderJunction(context, palette.wireInactive, palette.nodeStroke);
 				} else {
 					context.fillRect(-0.5, -0.5, 1, 1);
 					context.strokeRect(-0.5, -0.5, 1, 1);
