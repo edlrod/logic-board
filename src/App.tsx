@@ -64,7 +64,7 @@ const buildModuleDefinitions = (
 				{
 					kind: getModuleNodeKind(board.id),
 					displayName: board.name,
-					color: "#d3c4f3",
+					color: "#b8a8d9",
 					minInputs: Object.keys(board.inputPorts).length,
 					maxInputs: Object.keys(board.inputPorts).length,
 					outputCount: Object.keys(board.outputPorts).length,
@@ -426,7 +426,7 @@ const App = () => {
 	}, []);
 
 	return (
-		<div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.18),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#e8edf3_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.1),transparent_20%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
+		<div className="relative min-h-screen overflow-hidden bg-background">
 			<BoardViewport
 				board={activeBoard}
 				externalInputs={activeExternalInputs}
@@ -499,6 +499,7 @@ const App = () => {
 							onChange={(event) => setDialogValue(event.target.value)}
 							placeholder={dialogMeta?.placeholder}
 							autoFocus
+							className="uppercase"
 						/>
 					)}
 					<DialogFooter>
@@ -513,15 +514,23 @@ const App = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			<div className="fixed right-4 bottom-4 flex gap-2">
-				<a href="https://edlrod.com" target="_blank" rel="noreferrer">
+			<div className="text-muted-foreground fixed right-4 bottom-4 flex items-center gap-2 text-xs">
+				<a
+					href="https://edlrod.com"
+					target="_blank"
+					rel="noreferrer"
+					className="hover:text-foreground transition-colors"
+				>
 					edlrod
 				</a>
-				&bull;
+				<span aria-hidden="true" className="text-border">
+					&bull;
+				</span>
 				<a
 					href="https://github.com/edlrod/logic-board"
 					target="_blank"
 					rel="noreferrer"
+					className="hover:text-foreground transition-colors"
 				>
 					GitHub
 				</a>

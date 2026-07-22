@@ -13,8 +13,8 @@ export const isBuiltinNodeKind = (kind: NodeKind): kind is BuiltinNodeKind =>
 export const nodeDefinitions: NodeDefinitionRegistry = {
 	switch: {
 		kind: "switch",
-		displayName: "Switch",
-		color: "#d4a017",
+		displayName: "SWITCH",
+		color: "#ca8a04",
 		minInputs: 0,
 		maxInputs: 0,
 		outputCount: 1,
@@ -23,8 +23,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	buffer: {
 		kind: "buffer",
-		displayName: "Router",
-		color: "#7bdff2",
+		displayName: "ROUTER",
+		color: "#7cbed4",
 		minInputs: 1,
 		maxInputs: 1,
 		outputCount: 1,
@@ -33,8 +33,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	not: {
 		kind: "not",
-		displayName: "Not",
-		color: "#f4a261",
+		displayName: "NOT",
+		color: "#d9885a",
 		minInputs: 1,
 		maxInputs: 1,
 		outputCount: 1,
@@ -43,8 +43,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	and: {
 		kind: "and",
-		displayName: "And",
-		color: "#8ecae6",
+		displayName: "AND",
+		color: "#7fb0cc",
 		minInputs: 2,
 		maxInputs: null,
 		outputCount: 1,
@@ -53,8 +53,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	or: {
 		kind: "or",
-		displayName: "Or",
-		color: "#90be6d",
+		displayName: "OR",
+		color: "#7fa766",
 		minInputs: 2,
 		maxInputs: null,
 		outputCount: 1,
@@ -63,8 +63,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	xor: {
 		kind: "xor",
-		displayName: "Xor",
-		color: "#e76f51",
+		displayName: "XOR",
+		color: "#c9634b",
 		minInputs: 2,
 		maxInputs: null,
 		outputCount: 1,
@@ -75,8 +75,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	boardInput: {
 		kind: "boardInput",
-		displayName: "Board Input",
-		color: "#7bdff2",
+		displayName: "BOARD INPUT",
+		color: "#7cbed4",
 		minInputs: 0,
 		maxInputs: 0,
 		outputCount: 1,
@@ -85,8 +85,8 @@ export const nodeDefinitions: NodeDefinitionRegistry = {
 	},
 	boardOutput: {
 		kind: "boardOutput",
-		displayName: "Board Output",
-		color: "#b8f2e6",
+		displayName: "BOARD OUTPUT",
+		color: "#9fcec4",
 		minInputs: 1,
 		maxInputs: 1,
 		outputCount: 0,

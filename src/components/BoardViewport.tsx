@@ -292,28 +292,38 @@ export const BoardViewport = ({
 
 		const palette = isDarkMode
 			? {
-					gridAxis: "#64748b",
+					gridAxis: "#475569",
 					gridLine: "#1e293b",
-					wireInactive: "#cbd5e1",
-					wireShadow: "rgba(148, 163, 184, 0.18)",
-					wirePreviewShadow: "rgba(148, 163, 184, 0.16)",
-					nodeStroke: "#e2e8f0",
+					wireInactive: "#64748b",
+					wireShadow: "rgba(148, 163, 184, 0.12)",
+					wirePreviewShadow: "rgba(148, 163, 184, 0.14)",
+					nodeStroke: "#cbd5e1",
 					nodeText: "#e2e8f0",
 					portInactive: "#334155",
-					boardText: "#cbd5e1",
-					rotationIndicator: "#e2e8f0",
+					boardText: "#94a3b8",
+					rotationIndicator: "#cbd5e1",
+					active: "#2dd4bf",
+					hover: "#f59e0b",
+					occupied: "#f87171",
+					placementOkFill: "rgba(45, 212, 191, 0.20)",
+					placementOccupiedFill: "rgba(248, 113, 113, 0.20)",
 				}
 			: {
-					gridAxis: "#4f5d75",
-					gridLine: "#d8dde6",
-					wireInactive: "#1f2933",
-					wireShadow: "rgba(15, 23, 42, 0.12)",
-					wirePreviewShadow: "rgba(148, 163, 184, 0.22)",
-					nodeStroke: "#102a43",
-					nodeText: "#102a43",
-					portInactive: "#d9e2ec",
-					boardText: "#102a43",
-					rotationIndicator: "#102a43",
+					gridAxis: "#94a3b8",
+					gridLine: "#e2e8f0",
+					wireInactive: "#475569",
+					wireShadow: "rgba(15, 23, 42, 0.08)",
+					wirePreviewShadow: "rgba(15, 23, 42, 0.10)",
+					nodeStroke: "#1e293b",
+					nodeText: "#1e293b",
+					portInactive: "#cbd5e1",
+					boardText: "#334155",
+					rotationIndicator: "#334155",
+					active: "#0d9488",
+					hover: "#d97706",
+					occupied: "#dc2626",
+					placementOkFill: "rgba(13, 148, 136, 0.18)",
+					placementOccupiedFill: "rgba(220, 38, 38, 0.18)",
 				};
 
 		const drawWire = ({
@@ -504,9 +514,9 @@ export const BoardViewport = ({
 
 				context.save();
 				context.fillStyle = occupiedNode
-					? "rgba(231, 111, 81, 0.22)"
-					: "rgba(244, 211, 94, 0.22)";
-				context.strokeStyle = occupiedNode ? "#e76f51" : "#f4d35e";
+					? palette.placementOccupiedFill
+					: palette.placementOkFill;
+				context.strokeStyle = occupiedNode ? palette.occupied : palette.active;
 				context.lineWidth = 1 / 20;
 				context.fillRect(targetCell.x, targetCell.y, 1, 1);
 				context.strokeRect(targetCell.x, targetCell.y, 1, 1);
@@ -549,7 +559,7 @@ export const BoardViewport = ({
 					fromTangent,
 					toTangent,
 					color: currentSimulation.snapshot.portValues[wire.fromPortId]
-						? "#2a9d8f"
+						? palette.active
 						: palette.wireInactive,
 				});
 			});
@@ -580,7 +590,7 @@ export const BoardViewport = ({
 							color: currentSimulation.snapshot.portValues[
 								selectedSourcePortIdRef.current
 							]
-								? "#2a9d8f"
+								? palette.active
 								: palette.wireInactive,
 							preview: true,
 						});
@@ -625,9 +635,9 @@ export const BoardViewport = ({
 				}
 				context.fillStyle = isRouterNode
 					? isRouterHovered
-						? "#f4d35e"
+						? palette.hover
 						: isRouterActive
-							? "#2a9d8f"
+							? palette.active
 							: definition.color
 					: definition.color;
 				context.strokeStyle = palette.nodeStroke;
@@ -665,9 +675,9 @@ export const BoardViewport = ({
 					const isActive = currentSimulation.snapshot.portValues[port.id];
 					const outletSize = getNodeOutletSize(renderableNode);
 					context.fillStyle = isHovered
-						? "#f4d35e"
+						? palette.hover
 						: isActive
-							? "#2a9d8f"
+							? palette.active
 							: palette.portInactive;
 					context.beginPath();
 					context.ellipse(
@@ -692,9 +702,9 @@ export const BoardViewport = ({
 					const isActive = currentSimulation.snapshot.portValues[port.id];
 					const outletSize = getNodeOutletSize(renderableNode);
 					context.fillStyle = isHovered
-						? "#f4d35e"
+						? palette.hover
 						: isActive
-							? "#2a9d8f"
+							? palette.active
 							: palette.portInactive;
 					context.fillRect(
 						position.x - outletSize / 2,
@@ -710,9 +720,9 @@ export const BoardViewport = ({
 				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
 				context.fillStyle = isHovered
-					? "#f4d35e"
+					? palette.hover
 					: isActive
-						? "#2a9d8f"
+						? palette.active
 						: palette.portInactive;
 				context.beginPath();
 				context.ellipse(
@@ -740,9 +750,9 @@ export const BoardViewport = ({
 				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
 				context.fillStyle = isHovered
-					? "#f4d35e"
+					? palette.hover
 					: isActive
-						? "#2a9d8f"
+						? palette.active
 						: palette.portInactive;
 				context.fillRect(
 					position.x - BOARD_PORT_SIZE / 2,
@@ -1086,13 +1096,15 @@ export const BoardViewport = ({
 				ref={canvasRef}
 				className="block h-screen w-screen touch-manipulation"
 			/>
-			<div className="pointer-events-none absolute bottom-7 left-7 z-8 text-[#102a43] dark:text-slate-100">
-				<div className="mb-3 space-y-1.5 text-xs font-normal text-[#5b6573] dark:text-slate-400">
+			<div className="text-muted-foreground pointer-events-none absolute bottom-7 left-7 z-8">
+				<div className="mb-3 space-y-1.5 text-xs font-normal">
 					{CONTROL_LINES.map((line) => (
 						<p key={line}>{line}</p>
 					))}
 				</div>
-				<h2 className="text-xl leading-none font-bold">{board.name}</h2>
+				<h2 className="text-foreground text-xl leading-none font-semibold">
+					{board.name}
+				</h2>
 			</div>
 		</div>
 	);
