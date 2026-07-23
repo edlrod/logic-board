@@ -3,12 +3,14 @@ import {
 	type Board,
 	type BoardCommand,
 	type BoardPort,
+	type BoardPortRole,
 	buildPortLookup,
 	createNode,
 	type Node,
 	type NodeDefinitionRegistry,
 	type NodeKind,
 	type PortId,
+	type WireId,
 } from "../domain";
 import {
 	createViewportCamera,
@@ -36,11 +38,18 @@ interface HeldNode {
 	rotation: number;
 }
 
+interface HeldBoardPort {
+	portId: PortId;
+	role: BoardPortRole;
+	moved: boolean;
+}
+
 const CONTROL_LINES = [
 	"1 Test",
 	"2 Design",
 	"R Rotate",
 	"Ctrl Place Multiple",
+	"Ctrl+Z Undo  Ctrl+Shift+Z / Ctrl+Y Redo",
 	"Right Drag Pan",
 	"Right Click Cancel/Delete",
 ];
@@ -104,6 +113,40 @@ interface BoardViewportProps {
 }
 
 const BOARD_PORT_SIZE = 0.35;
+const ROUTER_RADIUS = 0.2;
+
+const drawSolderJunction = (
+	context: CanvasRenderingContext2D,
+	wireColor: string,
+	strokeColor: string,
+) => {
+	context.beginPath();
+	context.moveTo(0, -ROUTER_RADIUS);
+	context.lineTo(0, -0.5);
+	context.lineWidth = 1 / 28;
+	context.strokeStyle = wireColor;
+	context.stroke();
+	context.strokeStyle = strokeColor;
+	context.beginPath();
+	context.ellipse(0, 0, ROUTER_RADIUS, ROUTER_RADIUS, 0, 0, Math.PI * 2);
+	context.fill();
+	context.stroke();
+	context.save();
+	context.beginPath();
+	context.ellipse(
+		0,
+		0,
+		ROUTER_RADIUS * 0.5,
+		ROUTER_RADIUS * 0.5,
+		0,
+		0,
+		Math.PI * 2,
+	);
+	context.lineWidth = 1 / 44;
+	context.globalAlpha = 0.3;
+	context.stroke();
+	context.restore();
+};
 
 export const BoardViewport = ({
 	board,
@@ -124,6 +167,8 @@ export const BoardViewport = ({
 	const selectedSourcePortIdRef = useRef<PortId | null>(null);
 	const hoveredPortIdRef = useRef<PortId | null>(null);
 	const heldNodeRef = useRef<HeldNode | null>(null);
+	const heldBoardPortRef = useRef<HeldBoardPort | null>(null);
+	const hoveredWireIdRef = useRef<WireId | null>(null);
 	const placementRotationRef = useRef(0);
 	const needsRenderRef = useRef(true);
 	const boardRef = useRef(board);
@@ -153,6 +198,7 @@ export const BoardViewport = ({
 		toolRef.current = tool;
 		if (tool === "TEST") {
 			heldNodeRef.current = null;
+			heldBoardPortRef.current = null;
 			selectedSourcePortIdRef.current = null;
 		}
 		needsRenderRef.current = true;
@@ -269,6 +315,16 @@ export const BoardViewport = ({
 		}) => {
 			const boardPort = boardPortsById[portId];
 			if (boardPort) {
+				if (boardPort.offset) {
+					const role = boardPort.role;
+					const basePos = role === "boardInput" ? -6 : 6;
+					const dx = boardPort.offset.x - basePos;
+					const dy = boardPort.offset.y;
+					const length = Math.hypot(dx, dy);
+					if (length > 1e-6) {
+						return { x: dx / length, y: dy / length };
+					}
+				}
 				return boardPort.role === "boardInput"
 					? { x: 1, y: 0 }
 					: { x: -1, y: 0 };
@@ -292,28 +348,38 @@ export const BoardViewport = ({
 
 		const palette = isDarkMode
 			? {
-					gridAxis: "#64748b",
+					gridAxis: "#475569",
 					gridLine: "#1e293b",
-					wireInactive: "#cbd5e1",
-					wireShadow: "rgba(148, 163, 184, 0.18)",
-					wirePreviewShadow: "rgba(148, 163, 184, 0.16)",
-					nodeStroke: "#e2e8f0",
+					wireInactive: "#64748b",
+					wireShadow: "rgba(148, 163, 184, 0.12)",
+					wirePreviewShadow: "rgba(148, 163, 184, 0.14)",
+					nodeStroke: "#cbd5e1",
 					nodeText: "#e2e8f0",
 					portInactive: "#334155",
-					boardText: "#cbd5e1",
-					rotationIndicator: "#e2e8f0",
+					boardText: "#94a3b8",
+					rotationIndicator: "#cbd5e1",
+					active: "#2dd4bf",
+					hover: "#f59e0b",
+					occupied: "#f87171",
+					placementOkFill: "rgba(45, 212, 191, 0.20)",
+					placementOccupiedFill: "rgba(248, 113, 113, 0.20)",
 				}
 			: {
-					gridAxis: "#4f5d75",
-					gridLine: "#d8dde6",
-					wireInactive: "#1f2933",
-					wireShadow: "rgba(15, 23, 42, 0.12)",
-					wirePreviewShadow: "rgba(148, 163, 184, 0.22)",
-					nodeStroke: "#102a43",
-					nodeText: "#102a43",
-					portInactive: "#d9e2ec",
-					boardText: "#102a43",
-					rotationIndicator: "#102a43",
+					gridAxis: "#94a3b8",
+					gridLine: "#e2e8f0",
+					wireInactive: "#475569",
+					wireShadow: "rgba(15, 23, 42, 0.08)",
+					wirePreviewShadow: "rgba(15, 23, 42, 0.10)",
+					nodeStroke: "#1e293b",
+					nodeText: "#1e293b",
+					portInactive: "#cbd5e1",
+					boardText: "#334155",
+					rotationIndicator: "#334155",
+					active: "#0d9488",
+					hover: "#d97706",
+					occupied: "#dc2626",
+					placementOkFill: "rgba(13, 148, 136, 0.18)",
+					placementOccupiedFill: "rgba(220, 38, 38, 0.18)",
 				};
 
 		const drawWire = ({
@@ -393,6 +459,9 @@ export const BoardViewport = ({
 			const mouseWorld = worldMousePosition();
 
 			for (const port of Object.values(portById)) {
+				if (heldBoardPortRef.current?.portId === port.id) {
+					continue;
+				}
 				const position = getPortWorldPosition({
 					board: currentBoard,
 					portId: port.id,
@@ -432,6 +501,97 @@ export const BoardViewport = ({
 						node.position.y === Math.floor(mouseWorld.y),
 				) ?? null
 			);
+		};
+
+		const sampleBezierPoint = (
+			t: number,
+			p0: { x: number; y: number },
+			p1: { x: number; y: number },
+			p2: { x: number; y: number },
+			p3: { x: number; y: number },
+		) => {
+			const mt = 1 - t;
+			const x =
+				mt * mt * mt * p0.x +
+				3 * mt * mt * t * p1.x +
+				3 * mt * t * t * p2.x +
+				t * t * t * p3.x;
+			const y =
+				mt * mt * mt * p0.y +
+				3 * mt * mt * t * p1.y +
+				3 * mt * t * t * p2.y +
+				t * t * t * p3.y;
+			return { x, y };
+		};
+
+		const findWireAtMouse = () => {
+			const currentBoard = boardRef.current;
+			const { boardPortsById, renderableNodeByPortId } =
+				buildRenderableLookups(currentBoard);
+			const mouseWorld = worldMousePosition();
+			const hitThreshold = 0.15;
+
+			for (const wire of Object.values(currentBoard.wires)) {
+				const fromPosition = getPortWorldPosition({
+					board: currentBoard,
+					portId: wire.fromPortId,
+					boardPortsById,
+					nodeByPortId: renderableNodeByPortId,
+				});
+				const toPosition = getPortWorldPosition({
+					board: currentBoard,
+					portId: wire.toPortId,
+					boardPortsById,
+					nodeByPortId: renderableNodeByPortId,
+				});
+				if (!fromPosition || !toPosition) {
+					continue;
+				}
+				const fromTangent = getPortTangent({
+					portId: wire.fromPortId,
+					boardPortsById,
+					nodeByPortId: renderableNodeByPortId,
+				});
+				const toTangent = getPortTangent({
+					portId: wire.toPortId,
+					boardPortsById,
+					nodeByPortId: renderableNodeByPortId,
+				});
+				if (!fromTangent || !toTangent) {
+					continue;
+				}
+
+				const dx = toPosition.x - fromPosition.x;
+				const dy = toPosition.y - fromPosition.y;
+				const distance = Math.hypot(dx, dy);
+				const handleLength = Math.max(
+					0.75,
+					Math.min(2.4, distance * (Math.abs(dx) > Math.abs(dy) ? 0.38 : 0.28)),
+				);
+				const p0 = fromPosition;
+				const p1 = {
+					x: fromPosition.x + fromTangent.x * handleLength,
+					y: fromPosition.y + fromTangent.y * handleLength,
+				};
+				const p2 = {
+					x: toPosition.x + toTangent.x * handleLength,
+					y: toPosition.y + toTangent.y * handleLength,
+				};
+				const p3 = toPosition;
+
+				for (let i = 0; i <= 20; i += 1) {
+					const t = i / 20;
+					const point = sampleBezierPoint(t, p0, p1, p2, p3);
+					if (
+						Math.hypot(point.x - mouseWorld.x, point.y - mouseWorld.y) <
+						hitThreshold
+					) {
+						return wire.id;
+					}
+				}
+			}
+
+			return null;
 		};
 
 		const draw = () => {
@@ -487,6 +647,11 @@ export const BoardViewport = ({
 			context.translate(-camera.position.x, -camera.position.y);
 
 			hoveredPortIdRef.current = findPortAtMouse();
+			hoveredWireIdRef.current = hoveredPortIdRef.current
+				? null
+				: toolRef.current === "DESIGN"
+					? findWireAtMouse()
+					: null;
 
 			if (heldNodeRef.current) {
 				const targetCell = getHeldGridPosition();
@@ -504,9 +669,9 @@ export const BoardViewport = ({
 
 				context.save();
 				context.fillStyle = occupiedNode
-					? "rgba(231, 111, 81, 0.22)"
-					: "rgba(244, 211, 94, 0.22)";
-				context.strokeStyle = occupiedNode ? "#e76f51" : "#f4d35e";
+					? palette.placementOccupiedFill
+					: palette.placementOkFill;
+				context.strokeStyle = occupiedNode ? palette.occupied : palette.active;
 				context.lineWidth = 1 / 20;
 				context.fillRect(targetCell.x, targetCell.y, 1, 1);
 				context.strokeRect(targetCell.x, targetCell.y, 1, 1);
@@ -548,9 +713,12 @@ export const BoardViewport = ({
 					toPosition,
 					fromTangent,
 					toTangent,
-					color: currentSimulation.snapshot.portValues[wire.fromPortId]
-						? "#2a9d8f"
-						: palette.wireInactive,
+					color:
+						hoveredWireIdRef.current === wire.id
+							? palette.hover
+							: currentSimulation.snapshot.portValues[wire.fromPortId]
+								? palette.active
+								: palette.wireInactive,
 				});
 			});
 
@@ -580,7 +748,7 @@ export const BoardViewport = ({
 							color: currentSimulation.snapshot.portValues[
 								selectedSourcePortIdRef.current
 							]
-								? "#2a9d8f"
+								? palette.active
 								: palette.wireInactive,
 							preview: true,
 						});
@@ -625,26 +793,19 @@ export const BoardViewport = ({
 				}
 				context.fillStyle = isRouterNode
 					? isRouterHovered
-						? "#f4d35e"
+						? palette.hover
 						: isRouterActive
-							? "#2a9d8f"
+							? palette.active
 							: definition.color
 					: definition.color;
 				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
 				if (isRouterNode) {
-					context.beginPath();
-					context.ellipse(
-						0,
-						0,
-						BOARD_PORT_SIZE / 2,
-						BOARD_PORT_SIZE / 2,
-						0,
-						0,
-						Math.PI * 2,
+					drawSolderJunction(
+						context,
+						isRouterActive ? palette.active : palette.wireInactive,
+						palette.nodeStroke,
 					);
-					context.fill();
-					context.stroke();
 				} else {
 					context.fillRect(-0.5, -0.5, 1, 1);
 					context.strokeRect(-0.5, -0.5, 1, 1);
@@ -665,9 +826,9 @@ export const BoardViewport = ({
 					const isActive = currentSimulation.snapshot.portValues[port.id];
 					const outletSize = getNodeOutletSize(renderableNode);
 					context.fillStyle = isHovered
-						? "#f4d35e"
+						? palette.hover
 						: isActive
-							? "#2a9d8f"
+							? palette.active
 							: palette.portInactive;
 					context.beginPath();
 					context.ellipse(
@@ -692,9 +853,9 @@ export const BoardViewport = ({
 					const isActive = currentSimulation.snapshot.portValues[port.id];
 					const outletSize = getNodeOutletSize(renderableNode);
 					context.fillStyle = isHovered
-						? "#f4d35e"
+						? palette.hover
 						: isActive
-							? "#2a9d8f"
+							? palette.active
 							: palette.portInactive;
 					context.fillRect(
 						position.x - outletSize / 2,
@@ -706,13 +867,16 @@ export const BoardViewport = ({
 			});
 
 			Object.values(currentBoard.inputPorts).forEach((port) => {
+				if (heldBoardPortRef.current?.portId === port.id) {
+					return;
+				}
 				const position = getBoardPortPosition(currentBoard, port);
 				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
 				context.fillStyle = isHovered
-					? "#f4d35e"
+					? palette.hover
 					: isActive
-						? "#2a9d8f"
+						? palette.active
 						: palette.portInactive;
 				context.beginPath();
 				context.ellipse(
@@ -730,19 +894,22 @@ export const BoardViewport = ({
 				context.textAlign = "right";
 				context.fillText(
 					port.label ?? `IN ${port.index + 1}`,
-					position.x - 0.35,
+					position.x - BOARD_PORT_SIZE / 2 - 0.05,
 					position.y,
 				);
 			});
 
 			Object.values(currentBoard.outputPorts).forEach((port) => {
+				if (heldBoardPortRef.current?.portId === port.id) {
+					return;
+				}
 				const position = getBoardPortPosition(currentBoard, port);
 				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
 				context.fillStyle = isHovered
-					? "#f4d35e"
+					? palette.hover
 					: isActive
-						? "#2a9d8f"
+						? palette.active
 						: palette.portInactive;
 				context.fillRect(
 					position.x - BOARD_PORT_SIZE / 2,
@@ -755,7 +922,7 @@ export const BoardViewport = ({
 				context.textAlign = "left";
 				context.fillText(
 					port.label ?? `OUT ${port.index + 1}`,
-					position.x + 0.35,
+					position.x + BOARD_PORT_SIZE / 2 + 0.05,
 					position.y,
 				);
 			});
@@ -774,18 +941,7 @@ export const BoardViewport = ({
 				context.strokeStyle = palette.nodeStroke;
 				context.lineWidth = 1 / 28;
 				if (isRouterNode) {
-					context.beginPath();
-					context.ellipse(
-						0,
-						0,
-						BOARD_PORT_SIZE / 2,
-						BOARD_PORT_SIZE / 2,
-						0,
-						0,
-						Math.PI * 2,
-					);
-					context.fill();
-					context.stroke();
+					drawSolderJunction(context, palette.wireInactive, palette.nodeStroke);
 				} else {
 					context.fillRect(-0.5, -0.5, 1, 1);
 					context.strokeRect(-0.5, -0.5, 1, 1);
@@ -802,6 +958,67 @@ export const BoardViewport = ({
 					context.fillText(String(heldNode.inputCount), 0, -0.34);
 				}
 				context.restore();
+			}
+
+			if (heldBoardPortRef.current) {
+				const heldPort = heldBoardPortRef.current;
+				const port =
+					heldPort.role === "boardInput"
+						? currentBoard.inputPorts[heldPort.portId]
+						: currentBoard.outputPorts[heldPort.portId];
+				if (!port) {
+					return;
+				}
+				const isActive = currentSimulation.snapshot.portValues[port.id];
+				const position = heldPort.moved
+					? (() => {
+							const mouseWorld = worldMousePosition();
+							return {
+								x: Math.floor(mouseWorld.x) + 0.5,
+								y: Math.floor(mouseWorld.y) + 0.5,
+							};
+						})()
+					: getBoardPortPosition(currentBoard, port);
+				context.globalAlpha = 0.72;
+				context.fillStyle = isActive ? palette.active : palette.portInactive;
+				if (heldPort.role === "boardInput") {
+					context.beginPath();
+					context.ellipse(
+						position.x,
+						position.y,
+						BOARD_PORT_SIZE / 2,
+						BOARD_PORT_SIZE / 2,
+						0,
+						0,
+						Math.PI * 2,
+					);
+					context.fill();
+				} else {
+					context.fillRect(
+						position.x - BOARD_PORT_SIZE / 2,
+						position.y - BOARD_PORT_SIZE / 2,
+						BOARD_PORT_SIZE,
+						BOARD_PORT_SIZE,
+					);
+				}
+				context.globalAlpha = 1;
+				context.fillStyle = palette.boardText;
+				context.font = "700 0.22px 'IBM Plex Sans', sans-serif";
+				if (heldPort.role === "boardInput") {
+					context.textAlign = "right";
+					context.fillText(
+						port.label ?? `IN ${port.index + 1}`,
+						position.x - BOARD_PORT_SIZE / 2 - 0.05,
+						position.y,
+					);
+				} else {
+					context.textAlign = "left";
+					context.fillText(
+						port.label ?? `OUT ${port.index + 1}`,
+						position.x + BOARD_PORT_SIZE / 2 + 0.05,
+						position.y,
+					);
+				}
 			}
 		};
 
@@ -832,7 +1049,13 @@ export const BoardViewport = ({
 		};
 
 		const handleMouseDown = (event: MouseEvent) => {
+			mousePositionRef.current = { x: event.pageX, y: event.pageY };
 			if (event.button === 2) {
+				if (heldBoardPortRef.current) {
+					heldBoardPortRef.current = null;
+					needsRenderRef.current = true;
+					return;
+				}
 				const onMousePan = (moveEvent: MouseEvent) => {
 					cameraRef.current.position.x -=
 						moveEvent.movementX / cameraRef.current.pixelsPerUnit;
@@ -846,6 +1069,63 @@ export const BoardViewport = ({
 					() => window.removeEventListener("mousemove", onMousePan),
 					{ once: true },
 				);
+			} else if (event.button === 0 && toolRef.current === "DESIGN") {
+				if (heldNodeRef.current || selectedSourcePortIdRef.current) {
+					return;
+				}
+				const hoveredPortId = findPortAtMouse();
+				if (hoveredPortId) {
+					const { portById } = buildPortLookup(boardRef.current);
+					const port = portById[hoveredPortId];
+					if (port?.ownerKind === "board") {
+						heldBoardPortRef.current = {
+							portId: hoveredPortId,
+							role: port.role,
+							moved: false,
+						};
+						event.preventDefault();
+
+						const onDragMove = (moveEvent: MouseEvent) => {
+							mousePositionRef.current = {
+								x: moveEvent.pageX,
+								y: moveEvent.pageY,
+							};
+							if (heldBoardPortRef.current) {
+								heldBoardPortRef.current.moved = true;
+							}
+							needsRenderRef.current = true;
+						};
+
+						const onDragEnd = (upEvent: MouseEvent) => {
+							window.removeEventListener("mousemove", onDragMove);
+							if (heldBoardPortRef.current && upEvent.button === 0) {
+								if (heldBoardPortRef.current.moved) {
+									const mouseWorld = worldMousePosition();
+									onBoardCommand({
+										type: "moveBoardPort",
+										portId: heldBoardPortRef.current.portId,
+										offset: {
+											x: Math.floor(mouseWorld.x) + 0.5,
+											y: Math.floor(mouseWorld.y) + 0.5,
+										},
+									});
+									heldBoardPortRef.current = null;
+								} else {
+									heldBoardPortRef.current = null;
+									handleMouseUp(upEvent);
+								}
+							}
+							needsRenderRef.current = true;
+						};
+
+						window.addEventListener("mousemove", onDragMove);
+						window.addEventListener("mouseup", onDragEnd, {
+							once: true,
+						});
+						needsRenderRef.current = true;
+						return;
+					}
+				}
 			}
 		};
 
@@ -1013,6 +1293,11 @@ export const BoardViewport = ({
 						rotation: selectedNode.rotation,
 					};
 					selectedSourcePortIdRef.current = null;
+				} else if (hoveredWireIdRef.current) {
+					onBoardCommand({
+						type: "deleteWire",
+						wireId: hoveredWireIdRef.current,
+					});
 				}
 			} else if (toolRef.current === "DESIGN" && event.button === 2) {
 				if (heldNodeRef.current) {
@@ -1026,6 +1311,11 @@ export const BoardViewport = ({
 					onBoardCommand({
 						type: "deleteBoardPort",
 						portId: hoveredPort.id,
+					});
+				} else if (hoveredWireIdRef.current) {
+					onBoardCommand({
+						type: "deleteWire",
+						wireId: hoveredWireIdRef.current,
 					});
 				}
 			}
@@ -1086,13 +1376,15 @@ export const BoardViewport = ({
 				ref={canvasRef}
 				className="block h-screen w-screen touch-manipulation"
 			/>
-			<div className="pointer-events-none absolute bottom-7 left-7 z-8 text-[#102a43] dark:text-slate-100">
-				<div className="mb-3 space-y-1.5 text-xs font-normal text-[#5b6573] dark:text-slate-400">
+			<div className="text-muted-foreground pointer-events-none absolute bottom-7 left-7 z-8">
+				<div className="mb-3 space-y-1.5 text-xs font-normal">
 					{CONTROL_LINES.map((line) => (
 						<p key={line}>{line}</p>
 					))}
 				</div>
-				<h2 className="text-xl leading-none font-bold">{board.name}</h2>
+				<h2 className="text-foreground text-xl leading-none font-semibold">
+					{board.name}
+				</h2>
 			</div>
 		</div>
 	);

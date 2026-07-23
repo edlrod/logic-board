@@ -1,4 +1,4 @@
-import { MoonStar, SunMedium } from "lucide-react";
+import { MoonStar, Redo2, SunMedium, Undo2 } from "lucide-react";
 import type { BoardId, NodeDefinitionRegistry, NodeKind } from "../domain";
 import type { Tool } from "../editor/types";
 import { Button } from "./ui/button";
@@ -22,6 +22,8 @@ interface ToolbarProps {
 	showHelp: boolean;
 	isDarkMode: boolean;
 	nodeKinds: NodeKind[];
+	canUndo: boolean;
+	canRedo: boolean;
 	onToolChange(tool: Tool): void;
 	onActiveBoardChange(boardId: BoardId): void;
 	onNewBoard(): void;
@@ -33,18 +35,9 @@ interface ToolbarProps {
 	onImport(): void;
 	onHelpToggle(): void;
 	onThemeToggle(): void;
+	onUndo(): void;
+	onRedo(): void;
 }
-
-const getToolbarButtonClassName = (selected = false, extra = "") =>
-	[
-		"rounded-full border uppercase tracking-[0.08em]",
-		selected
-			? "border-[#d9b54c] bg-[#f4d35e] text-[#102a43] shadow-[0_10px_24px_rgba(244,211,94,0.28)] hover:bg-[#f4d35e]"
-			: "border-[rgba(16,42,67,0.16)] bg-[rgba(255,255,255,0.94)] text-[#102a43] hover:border-[rgba(16,42,67,0.28)] hover:bg-[rgba(255,255,255,0.94)] dark:border-white/12 dark:bg-[rgba(15,23,42,0.82)] dark:text-slate-100 dark:hover:border-white/22 dark:hover:bg-[rgba(15,23,42,0.82)]",
-		extra,
-	]
-		.filter(Boolean)
-		.join(" ");
 
 export const Toolbar = ({
 	isRootBoard,
@@ -56,6 +49,8 @@ export const Toolbar = ({
 	showHelp,
 	isDarkMode,
 	nodeKinds,
+	canUndo,
+	canRedo,
 	onToolChange,
 	onActiveBoardChange,
 	onNewBoard,
@@ -67,12 +62,14 @@ export const Toolbar = ({
 	onImport,
 	onHelpToggle,
 	onThemeToggle,
+	onUndo,
+	onRedo,
 }: ToolbarProps) => {
 	return (
 		<>
-			<header className="fixed top-4 right-4 left-4 z-10 flex items-center gap-3 overflow-x-auto rounded-[20px] border border-[rgba(16,42,67,0.12)] bg-[rgba(255,255,255,0.84)] p-3 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-lg dark:border-white/10 dark:bg-[rgba(15,23,42,0.74)] dark:shadow-[0_18px_48px_rgba(2,6,23,0.38)]">
-				<div className="flex items-center gap-2 rounded-full bg-[rgba(16,42,67,0.06)] px-3 py-1 dark:bg-white/6">
-					<span className="text-[0.72rem] font-bold tracking-[0.08em] text-[#5b6573] uppercase dark:text-slate-400">
+			<header className="bg-background/80 fixed top-4 right-4 left-4 z-10 flex items-center gap-2 overflow-x-auto rounded-xl border p-2 shadow-sm backdrop-blur">
+				<div className="flex items-center gap-1.5 rounded-lg bg-muted p-1">
+					<span className="text-muted-foreground px-1.5 text-xs font-medium tracking-wide uppercase">
 						Board
 					</span>
 					<Select
@@ -83,7 +80,7 @@ export const Toolbar = ({
 							}
 						}}
 					>
-						<SelectTrigger className="min-w-36 rounded-full bg-white font-semibold text-[#102a43] dark:bg-slate-900 dark:text-slate-100">
+						<SelectTrigger className="h-7 min-w-36 border-none bg-transparent">
 							<SelectValue>{boardName}</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
@@ -97,7 +94,7 @@ export const Toolbar = ({
 					<Button
 						type="button"
 						variant="outline"
-						className={getToolbarButtonClassName(false)}
+						size="sm"
 						onClick={onNewBoard}
 					>
 						New Board
@@ -105,33 +102,54 @@ export const Toolbar = ({
 					<Button
 						type="button"
 						variant="outline"
-						className={getToolbarButtonClassName(false)}
+						size="sm"
 						onClick={onRenameBoard}
 					>
 						Rename
 					</Button>
 				</div>
-				<div className="flex flex-wrap gap-2 rounded-full bg-[rgba(16,42,67,0.06)] p-1 dark:bg-white/6">
+				<div className="flex gap-1 rounded-lg bg-muted p-1">
 					{TOOL_SEQUENCE.map((toolName) => (
 						<Button
 							key={toolName}
 							type="button"
-							variant={tool === toolName ? "secondary" : "outline"}
-							className={getToolbarButtonClassName(tool === toolName)}
+							variant={tool === toolName ? "default" : "ghost"}
+							size="sm"
 							onClick={() => onToolChange(toolName)}
 						>
 							{toolName}
 						</Button>
 					))}
 				</div>
-				<div className="h-px w-full bg-[rgba(16,42,67,0.12)] dark:bg-white/10 lg:h-auto lg:w-px lg:self-stretch" />
+				<div className="flex gap-1">
+					<Button
+						type="button"
+						variant="outline"
+						size="icon-sm"
+						onClick={onUndo}
+						disabled={!canUndo}
+					>
+						<Undo2 className="size-4" />
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="icon-sm"
+						onClick={onRedo}
+						disabled={!canRedo}
+					>
+						<Redo2 className="size-4" />
+					</Button>
+				</div>
+				<div className="bg-border hidden h-auto w-px self-stretch lg:block" />
 				<div className="flex max-w-full flex-wrap gap-2 lg:max-w-[50vw]">
 					{nodeKinds.map((nodeKind) => (
 						<Button
 							key={nodeKind}
 							type="button"
 							variant="outline"
-							className={getToolbarButtonClassName(false, "min-w-20")}
+							size="sm"
+							className="min-w-20"
 							onClick={() => onNodeKindSelect(nodeKind)}
 						>
 							{nodeDefinitions[nodeKind]?.displayName ?? nodeKind}
@@ -144,7 +162,7 @@ export const Toolbar = ({
 							<Button
 								type="button"
 								variant="outline"
-								className={getToolbarButtonClassName(false)}
+								size="sm"
 								onClick={onAddBoardInput}
 							>
 								Add Input
@@ -152,33 +170,23 @@ export const Toolbar = ({
 							<Button
 								type="button"
 								variant="outline"
-								className={getToolbarButtonClassName(false)}
+								size="sm"
 								onClick={onAddBoardOutput}
 							>
 								Add Output
 							</Button>
 						</>
 					)}
-					<Button
-						type="button"
-						variant="outline"
-						className={getToolbarButtonClassName(false)}
-						onClick={onExport}
-					>
+					<Button type="button" variant="outline" size="sm" onClick={onExport}>
 						Export
 					</Button>
-					<Button
-						type="button"
-						variant="outline"
-						className={getToolbarButtonClassName(false)}
-						onClick={onImport}
-					>
+					<Button type="button" variant="outline" size="sm" onClick={onImport}>
 						Import
 					</Button>
 					<Button
 						type="button"
 						variant="outline"
-						className={getToolbarButtonClassName(false)}
+						size="sm"
 						onClick={onThemeToggle}
 					>
 						{isDarkMode ? (
@@ -191,7 +199,7 @@ export const Toolbar = ({
 					<Button
 						type="button"
 						variant="outline"
-						className={getToolbarButtonClassName(false)}
+						size="sm"
 						onClick={onHelpToggle}
 					>
 						Help
@@ -200,27 +208,35 @@ export const Toolbar = ({
 			</header>
 
 			{showHelp ? (
-				<aside className="fixed right-4 bottom-28 z-9 w-[min(360px,calc(100vw-32px))] rounded-3xl bg-[rgba(16,42,67,0.92)] p-5 text-[#f8fafc] shadow-[0_24px_60px_rgba(15,23,42,0.24)] dark:bg-[rgba(2,6,23,0.92)] dark:shadow-[0_24px_60px_rgba(2,6,23,0.44)] lg:top-25 lg:bottom-auto">
-					<h1 className="m-0 mb-3 text-[1.4rem] leading-[1.1] font-bold">
+				<aside className="bg-popover text-popover-foreground fixed right-4 bottom-28 z-9 w-[min(360px,calc(100vw-32px))] rounded-xl border p-5 shadow-lg lg:top-25 lg:bottom-auto">
+					<h1 className="mb-3 text-lg leading-tight font-semibold">
 						Logic Board
 					</h1>
-					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
 						Current board: {boardName}
 					</p>
-					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
 						Test: toggle switches and board inputs.
 					</p>
-					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
 						Design: pick up nodes, place them, or wire by clicking an output
 						port and then an input port when your hand is empty. Clicking empty
 						space while wiring drops a router dot and keeps the wire going.
 					</p>
-					<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
+						Drag board input/output ports to reposition them. Click a wire to
+						delete it.
+					</p>
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
+						Use the undo/redo buttons or Ctrl+Z / Ctrl+Shift+Z to step through
+						changes.
+					</p>
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
 						Every board is automatically available as a reusable module node in
 						other boards.
 					</p>
 					{isRootBoard ? (
-						<p className="mt-2 text-[0.95rem] leading-normal font-normal">
+						<p className="text-muted-foreground mt-2 text-sm leading-normal">
 							The main board cannot add board-level inputs or outputs.
 						</p>
 					) : null}

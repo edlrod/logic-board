@@ -64,7 +64,7 @@ const buildModuleDefinitions = (
 				{
 					kind: getModuleNodeKind(board.id),
 					displayName: board.name,
-					color: "#d3c4f3",
+					color: "#b8a8d9",
 					minInputs: Object.keys(board.inputPorts).length,
 					maxInputs: Object.keys(board.inputPorts).length,
 					outputCount: Object.keys(board.outputPorts).length,
@@ -148,6 +148,12 @@ const App = () => {
 	const [workspace, setWorkspace] = useState<Workspace>(() =>
 		createInitialWorkspace(),
 	);
+	const [undoCount, setUndoCount] = useState(0);
+	const [redoCount, setRedoCount] = useState(0);
+	const undoStackRef = useRef<Workspace[]>([]);
+	const redoStackRef = useRef<Workspace[]>([]);
+	const workspaceRef = useRef(workspace);
+	workspaceRef.current = workspace;
 	const [tool, setTool] = useState<Tool>("TEST");
 	const [showInfo, setShowInfo] = useState(false);
 	const [buildRequest, setBuildRequest] = useState<{
@@ -184,6 +190,10 @@ const App = () => {
 	};
 
 	const handleBoardCommand = useCallback((command: BoardCommand) => {
+		undoStackRef.current = [...undoStackRef.current, workspaceRef.current];
+		redoStackRef.current = [];
+		setUndoCount(undoStackRef.current.length);
+		setRedoCount(0);
 		setWorkspace((currentWorkspace) => {
 			const currentBoard =
 				currentWorkspace.boards[currentWorkspace.activeBoardId];
@@ -231,6 +241,34 @@ const App = () => {
 				) as Record<BoardId, Record<PortId, boolean>>,
 			};
 		});
+	}, []);
+
+	const handleUndo = useCallback(() => {
+		const stack = undoStackRef.current;
+		if (stack.length === 0) {
+			return;
+		}
+		const previous = stack[stack.length - 1];
+		undoStackRef.current = stack.slice(0, -1);
+		redoStackRef.current = [...redoStackRef.current, workspaceRef.current];
+		workspaceRef.current = previous;
+		setUndoCount(undoStackRef.current.length);
+		setRedoCount(redoStackRef.current.length);
+		setWorkspace(previous);
+	}, []);
+
+	const handleRedo = useCallback(() => {
+		const stack = redoStackRef.current;
+		if (stack.length === 0) {
+			return;
+		}
+		const next = stack[stack.length - 1];
+		redoStackRef.current = stack.slice(0, -1);
+		undoStackRef.current = [...undoStackRef.current, workspaceRef.current];
+		workspaceRef.current = next;
+		setUndoCount(undoStackRef.current.length);
+		setRedoCount(redoStackRef.current.length);
+		setWorkspace(next);
 	}, []);
 
 	const handleSpawnNode = (nodeKind: NodeKind) => {
@@ -414,6 +452,22 @@ const App = () => {
 				return;
 			}
 
+			if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				if (event.shiftKey) {
+					handleRedo();
+				} else {
+					handleUndo();
+				}
+				return;
+			}
+
+			if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				handleRedo();
+				return;
+			}
+
 			if (event.key === "1") {
 				setTool("TEST");
 			} else if (event.key === "2") {
@@ -423,10 +477,10 @@ const App = () => {
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, []);
+	}, [handleUndo, handleRedo]);
 
 	return (
-		<div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.18),transparent_24%),linear-gradient(180deg,#f8fafc_0%,#e8edf3_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(244,211,94,0.08),transparent_24%),radial-gradient(circle_at_top_right,rgba(42,157,143,0.1),transparent_20%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]">
+		<div className="relative min-h-screen overflow-hidden bg-background">
 			<BoardViewport
 				board={activeBoard}
 				externalInputs={activeExternalInputs}
@@ -448,6 +502,8 @@ const App = () => {
 				showHelp={showInfo}
 				isDarkMode={isDarkMode}
 				nodeKinds={paletteNodeKinds}
+				canUndo={undoCount > 0}
+				canRedo={redoCount > 0}
 				onToolChange={setTool}
 				onActiveBoardChange={(boardId) =>
 					setWorkspace((currentWorkspace) => ({
@@ -473,6 +529,8 @@ const App = () => {
 				}}
 				onHelpToggle={() => setShowInfo((visible) => !visible)}
 				onThemeToggle={() => setTheme(isDarkMode ? "light" : "dark")}
+				onUndo={handleUndo}
+				onRedo={handleRedo}
 			/>
 
 			<Dialog
@@ -499,6 +557,7 @@ const App = () => {
 							onChange={(event) => setDialogValue(event.target.value)}
 							placeholder={dialogMeta?.placeholder}
 							autoFocus
+							className="uppercase"
 						/>
 					)}
 					<DialogFooter>
@@ -513,15 +572,23 @@ const App = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			<div className="fixed right-4 bottom-4 flex gap-2">
-				<a href="https://edlrod.com" target="_blank" rel="noreferrer">
+			<div className="text-muted-foreground fixed right-4 bottom-4 flex items-center gap-2 text-xs">
+				<a
+					href="https://edlrod.com"
+					target="_blank"
+					rel="noreferrer"
+					className="hover:text-foreground transition-colors"
+				>
 					edlrod
 				</a>
-				&bull;
+				<span aria-hidden="true" className="text-border">
+					&bull;
+				</span>
 				<a
 					href="https://github.com/edlrod/logic-board"
 					target="_blank"
 					rel="noreferrer"
+					className="hover:text-foreground transition-colors"
 				>
 					GitHub
 				</a>
