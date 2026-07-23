@@ -148,8 +148,10 @@ const App = () => {
 	const [workspace, setWorkspace] = useState<Workspace>(() =>
 		createInitialWorkspace(),
 	);
-	const [undoStack, setUndoStack] = useState<Workspace[]>([]);
-	const [redoStack, setRedoStack] = useState<Workspace[]>([]);
+	const [undoCount, setUndoCount] = useState(0);
+	const [redoCount, setRedoCount] = useState(0);
+	const undoStackRef = useRef<Workspace[]>([]);
+	const redoStackRef = useRef<Workspace[]>([]);
 	const workspaceRef = useRef(workspace);
 	workspaceRef.current = workspace;
 	const [tool, setTool] = useState<Tool>("TEST");
@@ -188,8 +190,10 @@ const App = () => {
 	};
 
 	const handleBoardCommand = useCallback((command: BoardCommand) => {
-		setUndoStack((stack) => [...stack, workspaceRef.current]);
-		setRedoStack([]);
+		undoStackRef.current = [...undoStackRef.current, workspaceRef.current];
+		redoStackRef.current = [];
+		setUndoCount(undoStackRef.current.length);
+		setRedoCount(0);
 		setWorkspace((currentWorkspace) => {
 			const currentBoard =
 				currentWorkspace.boards[currentWorkspace.activeBoardId];
@@ -240,29 +244,31 @@ const App = () => {
 	}, []);
 
 	const handleUndo = useCallback(() => {
-		setUndoStack((stack) => {
-			if (stack.length === 0) {
-				return stack;
-			}
-			const previous = stack[stack.length - 1];
-			setRedoStack((redo) => [...redo, workspaceRef.current]);
-			workspaceRef.current = previous;
-			setWorkspace(previous);
-			return stack.slice(0, -1);
-		});
+		const stack = undoStackRef.current;
+		if (stack.length === 0) {
+			return;
+		}
+		const previous = stack[stack.length - 1];
+		undoStackRef.current = stack.slice(0, -1);
+		redoStackRef.current = [...redoStackRef.current, workspaceRef.current];
+		workspaceRef.current = previous;
+		setUndoCount(undoStackRef.current.length);
+		setRedoCount(redoStackRef.current.length);
+		setWorkspace(previous);
 	}, []);
 
 	const handleRedo = useCallback(() => {
-		setRedoStack((stack) => {
-			if (stack.length === 0) {
-				return stack;
-			}
-			const next = stack[stack.length - 1];
-			setUndoStack((undo) => [...undo, workspaceRef.current]);
-			workspaceRef.current = next;
-			setWorkspace(next);
-			return stack.slice(0, -1);
-		});
+		const stack = redoStackRef.current;
+		if (stack.length === 0) {
+			return;
+		}
+		const next = stack[stack.length - 1];
+		redoStackRef.current = stack.slice(0, -1);
+		undoStackRef.current = [...undoStackRef.current, workspaceRef.current];
+		workspaceRef.current = next;
+		setUndoCount(undoStackRef.current.length);
+		setRedoCount(redoStackRef.current.length);
+		setWorkspace(next);
 	}, []);
 
 	const handleSpawnNode = (nodeKind: NodeKind) => {
@@ -456,6 +462,12 @@ const App = () => {
 				return;
 			}
 
+			if (event.key === "y" && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				handleRedo();
+				return;
+			}
+
 			if (event.key === "1") {
 				setTool("TEST");
 			} else if (event.key === "2") {
@@ -490,8 +502,8 @@ const App = () => {
 				showHelp={showInfo}
 				isDarkMode={isDarkMode}
 				nodeKinds={paletteNodeKinds}
-				canUndo={undoStack.length > 0}
-				canRedo={redoStack.length > 0}
+				canUndo={undoCount > 0}
+				canRedo={redoCount > 0}
 				onToolChange={setTool}
 				onActiveBoardChange={(boardId) =>
 					setWorkspace((currentWorkspace) => ({

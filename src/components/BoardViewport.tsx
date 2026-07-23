@@ -49,7 +49,7 @@ const CONTROL_LINES = [
 	"2 Design",
 	"R Rotate",
 	"Ctrl Place Multiple",
-	"Ctrl+Z Undo  Ctrl+Shift+Z Redo",
+	"Ctrl+Z Undo  Ctrl+Shift+Z / Ctrl+Y Redo",
 	"Right Drag Pan",
 	"Right Click Cancel/Delete",
 ];
