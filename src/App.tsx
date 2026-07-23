@@ -148,6 +148,10 @@ const App = () => {
 	const [workspace, setWorkspace] = useState<Workspace>(() =>
 		createInitialWorkspace(),
 	);
+	const [undoStack, setUndoStack] = useState<Workspace[]>([]);
+	const [redoStack, setRedoStack] = useState<Workspace[]>([]);
+	const workspaceRef = useRef(workspace);
+	workspaceRef.current = workspace;
 	const [tool, setTool] = useState<Tool>("TEST");
 	const [showInfo, setShowInfo] = useState(false);
 	const [buildRequest, setBuildRequest] = useState<{
@@ -184,6 +188,8 @@ const App = () => {
 	};
 
 	const handleBoardCommand = useCallback((command: BoardCommand) => {
+		setUndoStack((stack) => [...stack, workspaceRef.current]);
+		setRedoStack([]);
 		setWorkspace((currentWorkspace) => {
 			const currentBoard =
 				currentWorkspace.boards[currentWorkspace.activeBoardId];
@@ -230,6 +236,32 @@ const App = () => {
 					]),
 				) as Record<BoardId, Record<PortId, boolean>>,
 			};
+		});
+	}, []);
+
+	const handleUndo = useCallback(() => {
+		setUndoStack((stack) => {
+			if (stack.length === 0) {
+				return stack;
+			}
+			const previous = stack[stack.length - 1];
+			setRedoStack((redo) => [...redo, workspaceRef.current]);
+			workspaceRef.current = previous;
+			setWorkspace(previous);
+			return stack.slice(0, -1);
+		});
+	}, []);
+
+	const handleRedo = useCallback(() => {
+		setRedoStack((stack) => {
+			if (stack.length === 0) {
+				return stack;
+			}
+			const next = stack[stack.length - 1];
+			setUndoStack((undo) => [...undo, workspaceRef.current]);
+			workspaceRef.current = next;
+			setWorkspace(next);
+			return stack.slice(0, -1);
 		});
 	}, []);
 
@@ -414,6 +446,16 @@ const App = () => {
 				return;
 			}
 
+			if (event.key === "z" && (event.ctrlKey || event.metaKey)) {
+				event.preventDefault();
+				if (event.shiftKey) {
+					handleRedo();
+				} else {
+					handleUndo();
+				}
+				return;
+			}
+
 			if (event.key === "1") {
 				setTool("TEST");
 			} else if (event.key === "2") {
@@ -423,7 +465,7 @@ const App = () => {
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, []);
+	}, [handleUndo, handleRedo]);
 
 	return (
 		<div className="relative min-h-screen overflow-hidden bg-background">
@@ -448,6 +490,8 @@ const App = () => {
 				showHelp={showInfo}
 				isDarkMode={isDarkMode}
 				nodeKinds={paletteNodeKinds}
+				canUndo={undoStack.length > 0}
+				canRedo={redoStack.length > 0}
 				onToolChange={setTool}
 				onActiveBoardChange={(boardId) =>
 					setWorkspace((currentWorkspace) => ({
@@ -473,6 +517,8 @@ const App = () => {
 				}}
 				onHelpToggle={() => setShowInfo((visible) => !visible)}
 				onThemeToggle={() => setTheme(isDarkMode ? "light" : "dark")}
+				onUndo={handleUndo}
+				onRedo={handleRedo}
 			/>
 
 			<Dialog

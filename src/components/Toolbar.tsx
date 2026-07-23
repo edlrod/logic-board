@@ -1,4 +1,4 @@
-import { MoonStar, SunMedium } from "lucide-react";
+import { MoonStar, Redo2, SunMedium, Undo2 } from "lucide-react";
 import type { BoardId, NodeDefinitionRegistry, NodeKind } from "../domain";
 import type { Tool } from "../editor/types";
 import { Button } from "./ui/button";
@@ -22,6 +22,8 @@ interface ToolbarProps {
 	showHelp: boolean;
 	isDarkMode: boolean;
 	nodeKinds: NodeKind[];
+	canUndo: boolean;
+	canRedo: boolean;
 	onToolChange(tool: Tool): void;
 	onActiveBoardChange(boardId: BoardId): void;
 	onNewBoard(): void;
@@ -33,6 +35,8 @@ interface ToolbarProps {
 	onImport(): void;
 	onHelpToggle(): void;
 	onThemeToggle(): void;
+	onUndo(): void;
+	onRedo(): void;
 }
 
 export const Toolbar = ({
@@ -45,6 +49,8 @@ export const Toolbar = ({
 	showHelp,
 	isDarkMode,
 	nodeKinds,
+	canUndo,
+	canRedo,
 	onToolChange,
 	onActiveBoardChange,
 	onNewBoard,
@@ -56,6 +62,8 @@ export const Toolbar = ({
 	onImport,
 	onHelpToggle,
 	onThemeToggle,
+	onUndo,
+	onRedo,
 }: ToolbarProps) => {
 	return (
 		<>
@@ -112,6 +120,26 @@ export const Toolbar = ({
 							{toolName}
 						</Button>
 					))}
+				</div>
+				<div className="flex gap-1">
+					<Button
+						type="button"
+						variant="outline"
+						size="icon-sm"
+						onClick={onUndo}
+						disabled={!canUndo}
+					>
+						<Undo2 className="size-4" />
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="icon-sm"
+						onClick={onRedo}
+						disabled={!canRedo}
+					>
+						<Redo2 className="size-4" />
+					</Button>
 				</div>
 				<div className="bg-border hidden h-auto w-px self-stretch lg:block" />
 				<div className="flex max-w-full flex-wrap gap-2 lg:max-w-[50vw]">
@@ -194,6 +222,14 @@ export const Toolbar = ({
 						Design: pick up nodes, place them, or wire by clicking an output
 						port and then an input port when your hand is empty. Clicking empty
 						space while wiring drops a router dot and keeps the wire going.
+					</p>
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
+						Drag board input/output ports to reposition them. Click a wire to
+						delete it.
+					</p>
+					<p className="text-muted-foreground mt-2 text-sm leading-normal">
+						Use the undo/redo buttons or Ctrl+Z / Ctrl+Shift+Z to step through
+						changes.
 					</p>
 					<p className="text-muted-foreground mt-2 text-sm leading-normal">
 						Every board is automatically available as a reusable module node in
