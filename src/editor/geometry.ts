@@ -78,6 +78,10 @@ const getCenteredPortY = (index: number, count: number) =>
 	(index - (count - 1) / 2) * 1.5;
 
 export const getBoardPortPosition = (board: Board, port: BoardPort): Point => {
+	if (port.offset) {
+		return port.offset;
+	}
+
 	if (port.role === "boardInput") {
 		return {
 			x: -6,

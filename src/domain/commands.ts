@@ -12,6 +12,7 @@ import type {
 	Board,
 	BoardCommand,
 	BoardCommandResult,
+	BoardPort,
 	BoardValidationIssue,
 	Node,
 	NodeDefinitionRegistry,
@@ -389,6 +390,32 @@ export const applyBoardCommand = (
 			return withValidation({
 				...board,
 				wires: remainingWires,
+			});
+		}
+
+		case "moveBoardPort": {
+			const inputPort = board.inputPorts[command.portId];
+			const outputPort = board.outputPorts[command.portId];
+			const port = inputPort ?? outputPort;
+			if (!port) {
+				return result(
+					board,
+					missingEntityIssue(
+						command.portId,
+						`Board port ${command.portId} was not found.`,
+					),
+				);
+			}
+
+			const updatedPort: BoardPort = { ...port, offset: command.offset };
+			return result({
+				...board,
+				inputPorts: inputPort
+					? { ...board.inputPorts, [port.id]: updatedPort }
+					: board.inputPorts,
+				outputPorts: outputPort
+					? { ...board.outputPorts, [port.id]: updatedPort }
+					: board.outputPorts,
 			});
 		}
 	}

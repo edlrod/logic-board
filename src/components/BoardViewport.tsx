@@ -3,6 +3,7 @@ import {
 	type Board,
 	type BoardCommand,
 	type BoardPort,
+	type BoardPortRole,
 	buildPortLookup,
 	createNode,
 	type Node,
@@ -34,6 +35,12 @@ interface HeldNode {
 	nodeId?: string;
 	inputCount: number;
 	rotation: number;
+}
+
+interface HeldBoardPort {
+	portId: PortId;
+	role: BoardPortRole;
+	moved: boolean;
 }
 
 const CONTROL_LINES = [
@@ -158,6 +165,7 @@ export const BoardViewport = ({
 	const selectedSourcePortIdRef = useRef<PortId | null>(null);
 	const hoveredPortIdRef = useRef<PortId | null>(null);
 	const heldNodeRef = useRef<HeldNode | null>(null);
+	const heldBoardPortRef = useRef<HeldBoardPort | null>(null);
 	const placementRotationRef = useRef(0);
 	const needsRenderRef = useRef(true);
 	const boardRef = useRef(board);
@@ -187,6 +195,7 @@ export const BoardViewport = ({
 		toolRef.current = tool;
 		if (tool === "TEST") {
 			heldNodeRef.current = null;
+			heldBoardPortRef.current = null;
 			selectedSourcePortIdRef.current = null;
 		}
 		needsRenderRef.current = true;
@@ -303,6 +312,16 @@ export const BoardViewport = ({
 		}) => {
 			const boardPort = boardPortsById[portId];
 			if (boardPort) {
+				if (boardPort.offset) {
+					const role = boardPort.role;
+					const basePos = role === "boardInput" ? -6 : 6;
+					const dx = boardPort.offset.x - basePos;
+					const dy = boardPort.offset.y;
+					const length = Math.hypot(dx, dy);
+					if (length > 1e-6) {
+						return { x: dx / length, y: dy / length };
+					}
+				}
 				return boardPort.role === "boardInput"
 					? { x: 1, y: 0 }
 					: { x: -1, y: 0 };
@@ -437,6 +456,9 @@ export const BoardViewport = ({
 			const mouseWorld = worldMousePosition();
 
 			for (const port of Object.values(portById)) {
+				if (heldBoardPortRef.current?.portId === port.id) {
+					continue;
+				}
 				const position = getPortWorldPosition({
 					board: currentBoard,
 					portId: port.id,
@@ -743,6 +765,9 @@ export const BoardViewport = ({
 			});
 
 			Object.values(currentBoard.inputPorts).forEach((port) => {
+				if (heldBoardPortRef.current?.portId === port.id) {
+					return;
+				}
 				const position = getBoardPortPosition(currentBoard, port);
 				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
@@ -773,6 +798,9 @@ export const BoardViewport = ({
 			});
 
 			Object.values(currentBoard.outputPorts).forEach((port) => {
+				if (heldBoardPortRef.current?.portId === port.id) {
+					return;
+				}
 				const position = getBoardPortPosition(currentBoard, port);
 				const isHovered = hoveredPortIdRef.current === port.id;
 				const isActive = currentSimulation.snapshot.portValues[port.id];
@@ -829,6 +857,44 @@ export const BoardViewport = ({
 				}
 				context.restore();
 			}
+
+			if (heldBoardPortRef.current?.moved) {
+				const mouseWorld = worldMousePosition();
+				const position = {
+					x: Math.floor(mouseWorld.x) + 0.5,
+					y: Math.floor(mouseWorld.y) + 0.5,
+				};
+				const port =
+					heldBoardPortRef.current.role === "boardInput"
+						? currentBoard.inputPorts[heldBoardPortRef.current.portId]
+						: currentBoard.outputPorts[heldBoardPortRef.current.portId];
+				const isActive = port
+					? currentSimulation.snapshot.portValues[port.id]
+					: false;
+				context.globalAlpha = 0.72;
+				context.fillStyle = isActive ? palette.active : palette.portInactive;
+				if (heldBoardPortRef.current.role === "boardInput") {
+					context.beginPath();
+					context.ellipse(
+						position.x,
+						position.y,
+						BOARD_PORT_SIZE / 2,
+						BOARD_PORT_SIZE / 2,
+						0,
+						0,
+						Math.PI * 2,
+					);
+					context.fill();
+				} else {
+					context.fillRect(
+						position.x - BOARD_PORT_SIZE / 2,
+						position.y - BOARD_PORT_SIZE / 2,
+						BOARD_PORT_SIZE,
+						BOARD_PORT_SIZE,
+					);
+				}
+				context.globalAlpha = 1;
+			}
 		};
 
 		const handleMouseMove = (event: MouseEvent) => {
@@ -858,7 +924,13 @@ export const BoardViewport = ({
 		};
 
 		const handleMouseDown = (event: MouseEvent) => {
+			mousePositionRef.current = { x: event.pageX, y: event.pageY };
 			if (event.button === 2) {
+				if (heldBoardPortRef.current) {
+					heldBoardPortRef.current = null;
+					needsRenderRef.current = true;
+					return;
+				}
 				const onMousePan = (moveEvent: MouseEvent) => {
 					cameraRef.current.position.x -=
 						moveEvent.movementX / cameraRef.current.pixelsPerUnit;
@@ -872,6 +944,63 @@ export const BoardViewport = ({
 					() => window.removeEventListener("mousemove", onMousePan),
 					{ once: true },
 				);
+			} else if (event.button === 0 && toolRef.current === "DESIGN") {
+				if (heldNodeRef.current || selectedSourcePortIdRef.current) {
+					return;
+				}
+				const hoveredPortId = findPortAtMouse();
+				if (hoveredPortId) {
+					const { portById } = buildPortLookup(boardRef.current);
+					const port = portById[hoveredPortId];
+					if (port?.ownerKind === "board") {
+						heldBoardPortRef.current = {
+							portId: hoveredPortId,
+							role: port.role,
+							moved: false,
+						};
+						event.preventDefault();
+
+						const onDragMove = (moveEvent: MouseEvent) => {
+							mousePositionRef.current = {
+								x: moveEvent.pageX,
+								y: moveEvent.pageY,
+							};
+							if (heldBoardPortRef.current) {
+								heldBoardPortRef.current.moved = true;
+							}
+							needsRenderRef.current = true;
+						};
+
+						const onDragEnd = (upEvent: MouseEvent) => {
+							window.removeEventListener("mousemove", onDragMove);
+							if (heldBoardPortRef.current && upEvent.button === 0) {
+								if (heldBoardPortRef.current.moved) {
+									const mouseWorld = worldMousePosition();
+									onBoardCommand({
+										type: "moveBoardPort",
+										portId: heldBoardPortRef.current.portId,
+										offset: {
+											x: Math.floor(mouseWorld.x) + 0.5,
+											y: Math.floor(mouseWorld.y) + 0.5,
+										},
+									});
+									heldBoardPortRef.current = null;
+								} else {
+									heldBoardPortRef.current = null;
+									handleMouseUp(upEvent);
+								}
+							}
+							needsRenderRef.current = true;
+						};
+
+						window.addEventListener("mousemove", onDragMove);
+						window.addEventListener("mouseup", onDragEnd, {
+							once: true,
+						});
+						needsRenderRef.current = true;
+						return;
+					}
+				}
 			}
 		};
 

@@ -38,6 +38,7 @@ export interface BoardPort extends BasePort {
 	ownerKind: "board";
 	ownerId: BoardId;
 	role: BoardPortRole;
+	offset?: Point;
 }
 
 export interface NodePort extends BasePort {
@@ -173,6 +174,11 @@ export type BoardCommand =
 	| {
 			type: "deleteWire";
 			wireId: WireId;
+	  }
+	| {
+			type: "moveBoardPort";
+			portId: PortId;
+			offset: Point;
 	  };
 
 export interface BoardCommandResult {
